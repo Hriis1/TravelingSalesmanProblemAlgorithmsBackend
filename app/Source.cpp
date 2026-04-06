@@ -2,7 +2,7 @@
 #include <vector>
 #include <iomanip>
 
-#include "../core/TravelingSalesmanProblem.h"
+#include "../core/TSPGeneticAlgo.h"
 #include "../core/TSPUtils.h"
 
 void outputPath(const std::vector<int>& path)
@@ -110,7 +110,7 @@ int main()
 		}
 
 		//Solve - unseeded
-		TravelingSalesmanProblem tsp = TravelingSalesmanProblem(adjMat, ng, npop, nnoimpr, pc, pm, initWithNN);
+		TSPGeneticAlgo tsp = TSPGeneticAlgo(adjMat, ng, npop, nnoimpr, pc, pm, initWithNN);
 		tsp.solve();
 
 		//Output path and dist
