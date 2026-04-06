@@ -110,8 +110,8 @@ int main()
 		}
 
 		//Solve - unseeded
-		TravelingSalesmanProblem tsp = TravelingSalesmanProblem(adjMat, ng, npop, nnoimpr, pc, pm);
-		tsp.solve(initWithNN);
+		TravelingSalesmanProblem tsp = TravelingSalesmanProblem(adjMat, ng, npop, nnoimpr, pc, pm, initWithNN);
+		tsp.solve();
 
 		//Output path and dist
 		int genDist = tsp.getCurrSolutionDist();

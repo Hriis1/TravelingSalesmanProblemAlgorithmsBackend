@@ -10,8 +10,8 @@
 class TravelingSalesmanProblem
 {
 public:
-	TravelingSalesmanProblem(const std::vector<std::vector<int>>& adjMat, int ng, int npop, int nnoimpr, float pc, float pm, unsigned int seed = std::random_device{}())
-		:_adjMat(&adjMat), _NG(ng), _NPOP(npop), _NNOIMPR(nnoimpr), _PC(pc), _PM(pm), _currSolution(adjMat.size()), _gen(seed)
+	TravelingSalesmanProblem(const std::vector<std::vector<int>>& adjMat, int ng, int npop, int nnoimpr, float pc, float pm, bool useNNIn1stGen = false, unsigned int seed = std::random_device{}())
+		:_adjMat(&adjMat), _NG(ng), _NPOP(npop), _NNOIMPR(nnoimpr), _PC(pc), _PM(pm), _currSolution(adjMat.size()), _useNNIn1stGen(useNNIn1stGen), _gen(seed)
 	{
 		_currSolution.dist = INT_MAX;
 
@@ -37,7 +37,7 @@ public:
 		_gen.seed(seed);
 	}
 
-	void solve(bool useNNIn1stGen = false)
+	void solve()
 	{
 		//Init variables
 		int noImproveCounter = _NNOIMPR;
@@ -50,7 +50,7 @@ public:
 
 		//Generate the 1st generation
 		size_t i = 0;
-		if (useNNIn1stGen)
+		if (_useNNIn1stGen)
 		{
 			//Use nearest neighbor as a child in the initial generation
 			currGen[i].path = TSPUtils::nearestNeighborPath(*_adjMat, 0);
@@ -439,6 +439,7 @@ private:
 	int _NNOIMPR = 0;
 	float _PC = 0.0f;
 	float _PM = 0.0f;
+	bool _useNNIn1stGen = false;
 	Genome _currSolution;
 	std::mt19937 _gen;
 };
