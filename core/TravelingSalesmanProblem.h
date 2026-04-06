@@ -3,15 +3,16 @@
 #include <array>
 #include <cassert>
 
+#include "TSPAlgo.h"
 #include "TSPSolution.h"
 #include "TSPUtils.h"
 
 
-class TravelingSalesmanProblem
+class TravelingSalesmanProblem: public TSPAlgo
 {
 public:
 	TravelingSalesmanProblem(const std::vector<std::vector<int>>& adjMat, int ng, int npop, int nnoimpr, float pc, float pm, bool useNNIn1stGen = false, unsigned int seed = std::random_device{}())
-		:_adjMat(&adjMat), _NG(ng), _NPOP(npop), _NNOIMPR(nnoimpr), _PC(pc), _PM(pm), _currSolution(adjMat.size()), _useNNIn1stGen(useNNIn1stGen), _gen(seed)
+		:TSPAlgo(adjMat, seed), _NG(ng), _NPOP(npop), _NNOIMPR(nnoimpr), _PC(pc), _PM(pm), _useNNIn1stGen(useNNIn1stGen)
 	{
 		_currSolution.dist = INT_MAX;
 
@@ -164,15 +165,6 @@ public:
 	}
 
 	//getters
-	int getCurrSolutionDist() const
-	{
-		return _currSolution.dist;
-	}
-
-	const std::vector<int>& getCurrSolutionPath() const
-	{
-		return _currSolution.path;
-	}
 
 private:
 
@@ -433,13 +425,10 @@ private:
 		return currBestIdx;
 	}
 
-	const std::vector<std::vector<int>>* _adjMat = nullptr;
 	int _NG = 0;
 	int _NPOP = 0;
 	int _NNOIMPR = 0;
 	float _PC = 0.0f;
 	float _PM = 0.0f;
 	bool _useNNIn1stGen = false;
-	TSPSolution _currSolution;
-	std::mt19937 _gen;
 };
