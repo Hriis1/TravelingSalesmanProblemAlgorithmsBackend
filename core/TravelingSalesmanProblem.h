@@ -3,7 +3,7 @@
 #include <array>
 #include <cassert>
 
-#include "Genome.h"
+#include "TSPSolution.h"
 #include "TSPUtils.h"
 
 
@@ -26,7 +26,7 @@ public:
 		_NNOIMPR = nnoimpr;
 		_PC = pc;
 		_PM = pm;
-		_currSolution = Genome(adjMat.size());
+		_currSolution = TSPSolution(adjMat.size());
 		_currSolution.dist = INT_MAX;
 
 		assert(_NPOP >= 3);
@@ -43,8 +43,8 @@ public:
 		int noImproveCounter = _NNOIMPR;
 		int currBestDist = INT_MAX;
 		int nParticipants = std::min(4, _NPOP);
-		std::vector<Genome> currGen(_NPOP, Genome(_adjMat->size()));
-		std::vector<Genome> nextGen;
+		std::vector<TSPSolution> currGen(_NPOP, TSPSolution(_adjMat->size()));
+		std::vector<TSPSolution> nextGen;
 		nextGen.reserve(_NPOP);
 		std::uniform_real_distribution<float> probDist(0.0f, 1.0f);
 
@@ -68,7 +68,7 @@ public:
 		int bestIdx2 = -1;
 
 		//helper func for finding the idxes of the 2 best solutions
-		auto findBestTwo = [&](const std::vector<Genome>& generation)
+		auto findBestTwo = [&](const std::vector<TSPSolution>& generation)
 		{
 			bestIdx1 = -1;
 			bestIdx2 = -1;
@@ -408,7 +408,7 @@ private:
 		}
 	}
 
-	int tournamentSelection(const std::vector<Genome>& generation, int numParticipants)
+	int tournamentSelection(const std::vector<TSPSolution>& generation, int numParticipants)
 	{
 		//generation should have as many elements as defined in _NPOP
 		assert(_NPOP == generation.size());
@@ -440,6 +440,6 @@ private:
 	float _PC = 0.0f;
 	float _PM = 0.0f;
 	bool _useNNIn1stGen = false;
-	Genome _currSolution;
+	TSPSolution _currSolution;
 	std::mt19937 _gen;
 };

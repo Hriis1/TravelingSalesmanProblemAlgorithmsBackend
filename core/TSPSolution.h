@@ -6,7 +6,7 @@
 #include <cassert>
 #include <climits>
 
-struct Genome
+struct TSPSolution
 {
 public:
 
@@ -15,7 +15,7 @@ public:
 	std::vector<int> path;
 
 	//funcs
-	Genome(int numCities) 
+	TSPSolution(int numCities) 
 	{
 		path.reserve(numCities);
 	}
