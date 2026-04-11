@@ -43,13 +43,13 @@ void printMatrix(const std::vector<std::vector<int>>& mat)
 int main() 
 {
 	//If brute force should be done
-	bool doBruteForce = true;
+	bool doBruteForce = false;
 
 	//If initial gen should be inited with NN
 	bool initWithNN = true;
 
 	//Number of runs to do
-	const int nRuns = 2;
+	const int nRuns = 10;
 
 	//Input adj matrix
 	std::vector<std::vector<int>> adjMat;
@@ -64,7 +64,7 @@ int main()
 	for (size_t i = 0; i < nRuns; i++)
 	{
 		std::cout << "Genereting matrix..." << std::endl;
-		adjMat = TSPUtils::generateTspAdjMatrix(10, TSPUtils::TspDatasetType::Circular);
+		adjMat = TSPUtils::generateTspAdjMatrix(100, TSPUtils::TspDatasetType::RandomUniform);
 		std::cout << "Matrix generated!" << std::endl;
 
 		//Print the matrix
@@ -89,6 +89,10 @@ int main()
 		float pm = 0.05f; //probability of mutation
 
 		//set up params based on num cities
+		ng = 500;
+		npop = 100;
+		nnoimpr = 100;
+		/*
 		if (nCities < 30)
 		{
 			ng = 500;
@@ -108,6 +112,7 @@ int main()
 			npop = 400;
 			nnoimpr = 200;
 		}
+		*/
 
 		//Solve - unseeded
 		TSPGeneticAlgo tsp = TSPGeneticAlgo(adjMat, ng, npop, nnoimpr, pc, pm, initWithNN);

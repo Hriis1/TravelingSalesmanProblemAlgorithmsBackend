@@ -106,7 +106,7 @@ public:
 			//2nd best
 			nextGen.emplace_back(currGen[bestIdx2]);
 
-			//Fill remaining elements using tournament selection, crossover and mutation
+			//Fill remaining elements using tournament selection, crossover, 2opt and mutation
 			for (size_t n = 2; n < _NPOP; n++)
 			{
 				//select parent 1 idx using tournament selection
@@ -126,6 +126,9 @@ public:
 					// just copy p1
 					nextGen.emplace_back(currGen[p1Idx]);
 				}
+
+				//2opt optimization
+				twoOpt(nextGen[n].path, (*_adjMat));
 
 				//base on the _PM probability mutate the new child
 				if (probDist(_gen) < _PM)
@@ -423,6 +426,35 @@ private:
 		}
 
 		return currBestIdx;
+	}
+
+	void twoOpt(std::vector<int>& sol, const std::vector<std::vector<int>>& adjMat)
+	{
+		int n = sol.size();
+		bool improved = true;
+
+		while (improved) {
+			improved = false;
+
+			for (int i = 1; i < n - 1; i++) {
+				for (int j = i + 1; j < n; j++) {
+
+					int a = sol[i - 1];
+					int b = sol[i];
+					int c = sol[j];
+					int d = sol[(j + 1) % n];
+
+					int oldDist = adjMat[a][b] + adjMat[c][d];
+					int newDist = adjMat[a][c] + adjMat[b][d];
+
+					if (newDist < oldDist) {
+						//reverse segment [i, j]
+						std::reverse(sol.begin() + i, sol.begin() + j + 1);
+						improved = true;
+					}
+				}
+			}
+		}
 	}
 
 	int _NG = 0;
