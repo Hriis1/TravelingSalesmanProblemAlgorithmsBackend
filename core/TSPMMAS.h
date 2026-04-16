@@ -30,5 +30,9 @@ private:
 
 public:
 
+    TSPMMAS(const std::vector<std::vector<int>>& adjMat, unsigned int seed = std::random_device{}()) 
+        :TSPAlgo(adjMat, seed)
+    {}
+
 private:
 };

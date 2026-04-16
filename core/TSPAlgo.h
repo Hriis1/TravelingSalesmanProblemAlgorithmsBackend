@@ -9,7 +9,9 @@ class TSPAlgo
 public:
 	TSPAlgo(const std::vector<std::vector<int>>& adjMat, unsigned int seed)
 		: _adjMat(&adjMat), _currSolution(adjMat.size()), _gen(seed)
-	{}
+	{
+		_currSolution.dist = INT_MAX;
+	}
 
 	void reseed(unsigned int seed = std::random_device{}())
 	{

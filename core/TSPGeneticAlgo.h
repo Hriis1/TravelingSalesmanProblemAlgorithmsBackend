@@ -14,8 +14,6 @@ public:
 	TSPGeneticAlgo(const std::vector<std::vector<int>>& adjMat, int ng, int npop, int nnoimpr, float pc, float pm, bool useNNIn1stGen = false, unsigned int seed = std::random_device{}())
 		:TSPAlgo(adjMat, seed), _NG(ng), _NPOP(npop), _NNOIMPR(nnoimpr), _PC(pc), _PM(pm), _useNNIn1stGen(useNNIn1stGen)
 	{
-		_currSolution.dist = INT_MAX;
-
 		assert(_NPOP >= 3);
 	}
 
