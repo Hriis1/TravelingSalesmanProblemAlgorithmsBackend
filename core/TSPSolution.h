@@ -71,4 +71,9 @@ public:
         // add return to start
         dist += adjMat[path[N - 1]][path[0]];
     }
+
+    //Operators
+    bool operator<(const TSPSolution& other) const {
+        return dist < other.dist;
+    }
 };
