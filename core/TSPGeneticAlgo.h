@@ -36,7 +36,7 @@ public:
 		_gen.seed(seed);
 	}
 
-	void solve()
+	void solve() override
 	{
 		//Init variables
 		int noImproveCounter = _NNOIMPR;

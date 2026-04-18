@@ -55,6 +55,11 @@ public:
         _ants.resize(_numAnts);
     }
 
+    void solve() override
+    {
+
+    }
+
 private:
     int _numAnts;        // number of ants per iteration
     int _numIterations;  // total iterations

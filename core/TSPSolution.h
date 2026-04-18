@@ -15,6 +15,8 @@ public:
 	std::vector<int> path;
 
 	//funcs
+    TSPSolution() {};
+
 	TSPSolution(int numCities) 
 	{
 		path.reserve(numCities);
