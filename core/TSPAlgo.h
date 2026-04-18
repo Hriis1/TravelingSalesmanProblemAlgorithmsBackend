@@ -7,10 +7,9 @@
 class TSPAlgo
 {
 public:
-	TSPAlgo(const std::vector<std::vector<int>>& adjMat, unsigned int seed)
-		: _adjMat(&adjMat), _currSolution(adjMat.size()), _gen(seed)
+	TSPAlgo(unsigned int seed)
+		: _gen(seed)
 	{
-		_currSolution.dist = INT_MAX;
 	}
 
 	void reseed(unsigned int seed = std::random_device{}())
@@ -18,7 +17,7 @@ public:
 		_gen.seed(seed);
 	}
 
-	virtual void solve() = 0;
+	virtual void solve(const std::vector<std::vector<int>>& adjMat) = 0;
 
 	//getters
 	int getCurrSolutionDist() const
@@ -31,7 +30,6 @@ public:
 		return _currSolution.path;
 	}
 protected:
-	const std::vector<std::vector<int>>* _adjMat = nullptr;
 	TSPSolution _currSolution;
 	std::mt19937 _gen;
 };

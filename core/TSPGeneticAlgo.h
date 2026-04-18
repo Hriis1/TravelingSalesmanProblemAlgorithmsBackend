@@ -11,21 +11,20 @@
 class TSPGeneticAlgo: public TSPAlgo
 {
 public:
-	TSPGeneticAlgo(const std::vector<std::vector<int>>& adjMat, int ng, int npop, int nnoimpr, float pc, float pm, bool useNNIn1stGen = false, unsigned int seed = std::random_device{}())
-		:TSPAlgo(adjMat, seed), _NG(ng), _NPOP(npop), _NNOIMPR(nnoimpr), _PC(pc), _PM(pm), _useNNIn1stGen(useNNIn1stGen)
+	TSPGeneticAlgo(int ng, int npop, int nnoimpr, float pc, float pm, bool useNNIn1stGen = false, unsigned int seed = std::random_device{}())
+		:TSPAlgo(seed), _NG(ng), _NPOP(npop), _NNOIMPR(nnoimpr), _PC(pc), _PM(pm), _useNNIn1stGen(useNNIn1stGen)
 	{
 		assert(_NPOP >= 3);
 	}
 
-	void reinit(const std::vector<std::vector<int>>& adjMat, int ng, int nnoimpr, int npop, float pc, float pm)
+	void reinit(int ng, int nnoimpr, int npop, float pc, float pm)
 	{
-		_adjMat = &adjMat;
 		_NG = ng;
 		_NPOP = npop;
 		_NNOIMPR = nnoimpr;
 		_PC = pc;
 		_PM = pm;
-		_currSolution = TSPSolution(adjMat.size());
+		_currSolution = TSPSolution();
 		_currSolution.dist = INT_MAX;
 
 		assert(_NPOP >= 3);
@@ -36,30 +35,31 @@ public:
 		_gen.seed(seed);
 	}
 
-	void solve() override
+	void solve(const std::vector<std::vector<int>>& adjMat) override
 	{
 		//Init variables
 		int noImproveCounter = _NNOIMPR;
 		int currBestDist = INT_MAX;
 		int nParticipants = std::min(4, _NPOP);
-		std::vector<TSPSolution> currGen(_NPOP, TSPSolution(_adjMat->size()));
+		std::vector<TSPSolution> currGen(_NPOP, TSPSolution(adjMat.size()));
 		std::vector<TSPSolution> nextGen;
 		nextGen.reserve(_NPOP);
 		std::uniform_real_distribution<float> probDist(0.0f, 1.0f);
+		_currSolution.path.reserve(adjMat.size());
 
 		//Generate the 1st generation
 		size_t i = 0;
 		if (_useNNIn1stGen)
 		{
 			//Use nearest neighbor as a child in the initial generation
-			currGen[i].path = TSPUtils::nearestNeighborPath(*_adjMat, 0);
-			currGen[i].calculateDist(*_adjMat);
+			currGen[i].path = TSPUtils::nearestNeighborPath(adjMat, 0);
+			currGen[i].calculateDist(adjMat);
 			i++;
 		}
 		//Generare the rest randomly
 		for (; i < _NPOP; i++)
 		{
-			currGen[i].generate(*_adjMat, _gen);
+			currGen[i].generate(adjMat, _gen);
 		}
 
 		//Get the idxes of the 2 best solutions
@@ -116,7 +116,7 @@ public:
 					// do crossover
 					int p2Idx = tournamentSelection(currGen, nParticipants);
 					auto childPath = edgeRecombinationCrossover(currGen[p1Idx].path, currGen[p2Idx].path);
-					nextGen.emplace_back(_adjMat->size());
+					nextGen.emplace_back(adjMat.size());
 					nextGen[n].path = std::move(childPath);
 				}
 				else
@@ -126,7 +126,7 @@ public:
 				}
 
 				//2opt optimization
-				twoOpt(nextGen[n].path, (*_adjMat));
+				twoOpt(nextGen[n].path, adjMat);
 
 				//base on the _PM probability mutate the new child
 				if (probDist(_gen) < _PM)
@@ -135,7 +135,7 @@ public:
 				}
 
 				//Calculate the dist of the new child
-				nextGen[n].calculateDist(*_adjMat);
+				nextGen[n].calculateDist(adjMat);
 			}
 
 			//Find the idxes of the 2 best solutions of this gen

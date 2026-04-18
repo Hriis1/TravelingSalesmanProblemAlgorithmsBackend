@@ -115,8 +115,8 @@ int main()
 		*/
 
 		//Solve - unseeded
-		TSPGeneticAlgo tsp = TSPGeneticAlgo(adjMat, ng, npop, nnoimpr, pc, pm, initWithNN);
-		tsp.solve();
+		TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
+		tsp.solve(adjMat);
 
 		//Output path and dist
 		int genDist = tsp.getCurrSolutionDist();
