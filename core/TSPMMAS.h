@@ -30,13 +30,26 @@ private:
 
 public:
 
-    TSPMMAS(int numAnts, int numIterations, float alpha, float beta, float rho, float tauMin, float tauMax, unsigned int seed = std::random_device{}()) 
-        :TSPAlgo(seed), _numAnts(numAnts), _ants(numAnts), _numIterations(numIterations), _alpha(alpha), _beta(beta), _rho(rho), _tauMin(tauMin), _tauMax(tauMax)
+    TSPMMAS(int numAnts, int numIterations, float alpha, float beta, float rho, unsigned int seed = std::random_device{}()) 
+        :TSPAlgo(seed), _numAnts(numAnts), _ants(numAnts), _numIterations(numIterations), _alpha(alpha), _beta(beta), _rho(rho)
     {}
 
     void solve(const std::vector<std::vector<int>>& adjMat) override
     {
         int nCities = adjMat.size();
+
+        //Initial solution using nearst neighbor
+        _currSolution.path = TSPUtils::nearestNeighborPath(adjMat);
+        _currSolution.calculateDist(adjMat);
+
+        //Init _tauMin and _tauMax
+        _tauMax = 1.0f / (_rho * _currSolution.dist);
+
+        float pBest = 0.05f;
+        float pRoot = pow(pBest, 1.0f / nCities);
+        float avg = nCities / 2.0f;
+
+        _tauMin = _tauMax * (1 - pRoot) / ((avg - 1) * pRoot);
 
         //Init pheromone matrix with _tauMax
         _pheromone.assign(nCities, std::vector<float>(nCities, _tauMax));
@@ -56,16 +69,16 @@ public:
     }
 
 private:
-    int _numAnts;        // number of ants per iteration
-    int _numIterations;  // total iterations
+    int _numAnts = 0;        // number of ants per iteration
+    int _numIterations = 0;  // total iterations
 
-    float _alpha;       // pheromone importance
-    float _beta;        // heuristic importance
-    float _rho;         // evaporation rate (0–1)
+    float _alpha = 0;       // pheromone importance
+    float _beta = 0;        // heuristic importance
+    float _rho = 0;         // evaporation rate (0–1)
 
     //Pheromone bounds
-    float _tauMin;
-    float _tauMax;
+    float _tauMin = 0;
+    float _tauMax = 0;
 
     int _globalBestFreq = 10;
 
