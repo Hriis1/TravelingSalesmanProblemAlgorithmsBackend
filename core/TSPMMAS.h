@@ -69,6 +69,7 @@ public:
     }
 
 private:
+    //Ant makes a tour
     void antTour(Ant& ant, const std::vector<std::vector<int>>& adjMat)
     {
         int nCities = adjMat.size();
@@ -130,6 +131,14 @@ private:
             ant.visited[nextCity] = true;
             ant.currentCityIdx = nextCity;
         }
+    }
+
+    //Normalize a path to start at the start city
+    void normalizePathToStart(std::vector<int>& path, int startCity = 0)
+    {
+        auto it = std::find(path.begin(), path.end(), startCity);
+        if (it != path.end())
+            std::rotate(path.begin(), it, path.end());
     }
 
 private:
