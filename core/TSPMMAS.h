@@ -30,7 +30,7 @@ private:
 
 public:
 
-    TSPMMAS(int numAnts, int numIterations, float alpha, float beta, float rho, unsigned int seed = std::random_device{}()) 
+    TSPMMAS(int numAnts, int numIterations, double alpha, double beta, double rho, unsigned int seed = std::random_device{}()) 
         :TSPAlgo(seed), _numAnts(numAnts), _ants(numAnts), _numIterations(numIterations), _alpha(alpha), _beta(beta), _rho(rho)
     {}
 
@@ -45,17 +45,17 @@ public:
         //Init _tauMin and _tauMax
         _tauMax = 1.0f / (_rho * _currSolution.dist);
 
-        float pBest = 0.05f;
-        float pRoot = pow(pBest, 1.0f / nCities);
-        float avg = nCities / 2.0f;
+        double pBest = 0.05f;
+        double pRoot = pow(pBest, 1.0f / nCities);
+        double avg = nCities / 2.0f;
 
         _tauMin = _tauMax * (1 - pRoot) / ((avg - 1) * pRoot);
 
         //Init pheromone matrix with _tauMax
-        _pheromone.assign(nCities, std::vector<float>(nCities, _tauMax));
+        _pheromone.assign(nCities, std::vector<double>(nCities, _tauMax));
 
         //Init the heuristic matrix with 1/<dist between cities>
-        _heuristic.assign(nCities, std::vector<float>(nCities));
+        _heuristic.assign(nCities, std::vector<double>(nCities));
         for (size_t y = 0; y < nCities; y++)
         {
             for (size_t x = 0; x < nCities; x++)
@@ -72,17 +72,17 @@ private:
     int _numAnts = 0;        // number of ants per iteration
     int _numIterations = 0;  // total iterations
 
-    float _alpha = 0;       // pheromone importance
-    float _beta = 0;        // heuristic importance
-    float _rho = 0;         // evaporation rate (0–1)
+    double _alpha = 0;       // pheromone importance
+    double _beta = 0;        // heuristic importance
+    double _rho = 0;         // evaporation rate (0–1)
 
     //Pheromone bounds
-    float _tauMin = 0;
-    float _tauMax = 0;
+    double _tauMin = 0;
+    double _tauMax = 0;
 
     int _globalBestFreq = 10;
 
     std::vector<Ant> _ants;
-    std::vector<std::vector<float>> _pheromone;
-    std::vector<std::vector<float>> _heuristic;
+    std::vector<std::vector<double>> _pheromone;
+    std::vector<std::vector<double>> _heuristic;
 };
