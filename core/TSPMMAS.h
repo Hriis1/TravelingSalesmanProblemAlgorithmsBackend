@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <climits>
 #include <array>
 #include <cassert>
@@ -69,12 +69,76 @@ public:
     }
 
 private:
+    void antTour(Ant& ant, const std::vector<std::vector<int>>& adjMat)
+    {
+        int nCities = adjMat.size();
+
+        while ((int)ant.path.size() < nCities)
+        {
+            int i = ant.currentCityIdx;
+
+            // compute weights
+            double sum = 0;
+            std::vector<double> weights(nCities, 0);
+
+            for (int j = 0; j < nCities; j++) {
+                if (!ant.visited[j]) {
+                    double tau = _pheromone[i][j];
+                    double eta = _heuristic[i][j];
+
+                    double w;
+
+                    if (_alpha == 1.0 && _beta == 2.0) {
+                        w = tau * (eta * eta);
+                    }
+                    else {
+                        w = pow(tau, _alpha) * pow(eta, _beta);
+                    }
+
+                    weights[j] = w;
+                    sum += w;
+                }
+            }
+
+            // pick next city (roulette)
+            double r = std::uniform_real_distribution<>(0.0, sum)(_gen);
+            double cum = 0;
+            int nextCity = -1;
+
+            for (int j = 0; j < nCities; j++) {
+                if (!ant.visited[j]) {
+                    cum += weights[j];
+                    if (cum >= r) {
+                        nextCity = j;
+                        break;
+                    }
+                }
+            }
+
+            // safety fallback (rare floating issue)
+            if (nextCity == -1) {
+                for (int j = 0; j < nCities; j++) {
+                    if (!ant.visited[j]) {
+                        nextCity = j;
+                        break;
+                    }
+                }
+            }
+
+            // update ant
+            ant.path.push_back(nextCity);
+            ant.visited[nextCity] = true;
+            ant.currentCityIdx = nextCity;
+        }
+    }
+
+private:
     int _numAnts = 0;        // number of ants per iteration
     int _numIterations = 0;  // total iterations
 
     double _alpha = 0;       // pheromone importance
     double _beta = 0;        // heuristic importance
-    double _rho = 0;         // evaporation rate (0�1)
+    double _rho = 0;         // evaporation rate (0–1)
 
     //Pheromone bounds
     double _tauMin = 0;
