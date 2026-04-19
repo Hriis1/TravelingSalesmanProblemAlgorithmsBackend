@@ -103,7 +103,7 @@ public:
                 }
 
                 //Evaporate pheromones
-                evaporatePheromones();
+                evaporatePheromone();
 
                 //Chose iter best or global best path to deposit pheromone
                 const std::vector<int>& depositingPath = iter % numItersPerGlobalBestForPheromone == 0 ? _currSolution.path : _ants[currIterBestAntIdx].path;
@@ -186,18 +186,26 @@ private:
         }
     }
 
-    void evaporatePheromones()
+    void evaporatePheromone()
     {
         int n = _pheromone.size();
         double factor = 1.0 - _rho;
 
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
+                //evaporate
                 _pheromone[i][j] *= factor;
+
+                //clamp with the lower bound
+                _pheromone[i][j] = std::max(_tauMin, _pheromone[i][j]);
+
+                //matrix is mirrored
                 _pheromone[j][i] = _pheromone[i][j];
             }
         }
     }
+
+
 
     //Normalize a path to start at the start city
     void normalizePathToStart(std::vector<int>& path, int startCity = 0)
