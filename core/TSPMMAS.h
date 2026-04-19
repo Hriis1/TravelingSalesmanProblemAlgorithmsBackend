@@ -71,7 +71,7 @@ public:
 
         //Iterate for _numIterations for each ant
         int startCity = 0;
-        int numItersGlobalBestForPheromone = 10;
+        int numItersPerGlobalBestForPheromone = 10;
         for (size_t iter = 0; iter < _numIterations; iter++)
         {
             int currIterBestDist = INT_MAX;
@@ -104,6 +104,9 @@ public:
 
                 //Evaporate pheromones
                 evaporatePheromones();
+
+                //Chose iter best or global best path to deposit pheromone
+                const std::vector<int>& depositingPath = iter % numItersPerGlobalBestForPheromone == 0 ? _currSolution.path : _ants[currIterBestAntIdx].path;
             }
         }
     }
