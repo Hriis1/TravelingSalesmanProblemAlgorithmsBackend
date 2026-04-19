@@ -71,9 +71,11 @@ public:
 
         //Iterate for _numIterations for each ant
         int startCity = 0;
+        int numItersGlobalBestForPheromone = 10;
         for (size_t iter = 0; iter < _numIterations; iter++)
         {
             int currIterBestDist = INT_MAX;
+            int currIterBestAntIdx = -1;
 
             for (size_t a = 0; a < _numAnts; a++)
             {
@@ -85,6 +87,23 @@ public:
 
                 //Ant tour
                 doAntTour(currAnt, adjMat);
+
+                //Update iteration and global best
+                if (currAnt.dist < currIterBestDist)
+                {
+                    currIterBestDist = currAnt.dist;
+                    currIterBestAntIdx = a;
+
+                    //update global best if it beats it
+                    if (currAnt.dist < _currSolution.dist)
+                    {
+                        _currSolution.path = currAnt.path;
+                        _currSolution.dist = currAnt.dist;
+                    }
+                }
+
+                //Evaporate pheromones
+                evaporatePheromones();
             }
         }
     }
@@ -160,6 +179,19 @@ private:
                     nextCity = j;
                     break;
                 }
+            }
+        }
+    }
+
+    void evaporatePheromones()
+    {
+        int n = _pheromone.size();
+        double factor = 1.0 - _rho;
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                _pheromone[i][j] *= factor;
+                _pheromone[j][i] = _pheromone[i][j];
             }
         }
     }
