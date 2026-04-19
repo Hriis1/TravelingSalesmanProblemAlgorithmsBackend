@@ -105,8 +105,13 @@ public:
                 //Evaporate pheromones
                 evaporatePheromone();
 
-                //Chose iter best or global best path to deposit pheromone
-                const std::vector<int>& depositingPath = iter % numItersPerGlobalBestForPheromone == 0 ? _currSolution.path : _ants[currIterBestAntIdx].path;
+                //Choose iter best or global best path to deposit pheromone
+                bool useGlobal = (iter % numItersPerGlobalBestForPheromone == 0);
+                const std::vector<int>& depositingPath = useGlobal ? _currSolution.path : _ants[currIterBestAntIdx].path;
+                int depositDist = useGlobal ? _currSolution.dist : _ants[currIterBestAntIdx].dist;
+
+                //Deposit pheromone
+                depositPheromone(depositingPath, depositDist);
             }
         }
     }
@@ -203,6 +208,39 @@ private:
                 _pheromone[j][i] = _pheromone[i][j];
             }
         }
+    }
+
+    void depositPheromone(const std::vector<int>& path, int dist)
+    {
+        //amount to deposit
+        double pherAmount = 1.0 / dist;
+
+        //deposit on path edges
+        for (size_t i = 1; i < path.size(); i++)
+        {
+            int u = path[i - 1];
+            int v = path[i];
+
+            _pheromone[u][v] += pherAmount;
+
+            //clamp with upper bound
+            _pheromone[u][v] = std::min(_tauMax, _pheromone[u][v]);
+
+            //mirror
+            _pheromone[v][u] = _pheromone[u][v];
+        }
+
+        int u = path.back();
+        int v = path[0];
+
+        //deposit on return to start edge
+        _pheromone[u][v] += pherAmount;
+
+        //clamp with upper bound
+        _pheromone[u][v] = std::min(_tauMax, _pheromone[u][v]);
+
+        //mirror
+        _pheromone[v][u] = _pheromone[u][v];
     }
 
 
