@@ -13,10 +13,12 @@ class TSPMMAS: public TSPAlgo
 private:
     struct Ant {
         std::vector<int> path;
-        std::vector<bool> visited; 
+        std::vector<bool> visited;
+        int dist = 0;
         int currentCityIdx;  
 
         void reset(int N, int startCity) {
+            dist = 0;
             path.clear();
             path.reserve(N);
 
@@ -66,6 +68,12 @@ public:
                     _heuristic[y][x] = 0;
             }
         }
+
+        //Iterate
+        for (size_t iter = 0; iter < _numIterations; iter++)
+        {
+
+        }
     }
 
 private:
@@ -80,10 +88,14 @@ private:
             int nextCity = chooseNextCity(ant, nCities);
 
             // update ant
+            ant.dist += adjMat[ant.currentCityIdx][nextCity];
             ant.path.push_back(nextCity);
             ant.visited[nextCity] = true;
             ant.currentCityIdx = nextCity;
         }
+
+        //add return to start
+        ant.dist += adjMat[ant.currentCityIdx][ant.path[0]];
     }
 
     int chooseNextCity(Ant& ant, int nCities)
