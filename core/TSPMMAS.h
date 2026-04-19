@@ -69,16 +69,29 @@ public:
             }
         }
 
-        //Iterate
+        //Iterate for _numIterations for each ant
+        int startCity = 0;
         for (size_t iter = 0; iter < _numIterations; iter++)
         {
+            int currIterBestDist = INT_MAX;
 
+            for (size_t a = 0; a < _numAnts; a++)
+            {
+                auto& currAnt = _ants[a];
+
+                //reset ants with a random start city
+                startCity = std::uniform_int_distribution<>(0, nCities - 1)(_gen);
+                currAnt.reset(nCities, startCity);
+
+                //Ant tour
+                doAntTour(currAnt, adjMat);
+            }
         }
     }
 
 private:
     //Ant makes a tour
-    void antTour(Ant& ant, const std::vector<std::vector<int>>& adjMat)
+    void doAntTour(Ant& ant, const std::vector<std::vector<int>>& adjMat)
     {
         int nCities = adjMat.size();
 
