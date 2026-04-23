@@ -92,22 +92,26 @@ public:
                     //update global best if it beats it
                     if (currAnt.dist < _currSolution.dist)
                     {
+                        //update best
                         _currSolution.path = currAnt.path;
                         _currSolution.dist = currAnt.dist;
+
+                        //update tauMin and tauMax
+                        updateTauMinAndTauMax(pBest, nCities);
                     }
                 }
-
-                //Evaporate pheromones
-                evaporatePheromone();
-
-                //Choose iter best or global best path to deposit pheromone
-                bool useGlobal = (iter % numItersPerGlobalBestForPheromone == 0);
-                const std::vector<int>& depositingPath = useGlobal ? _currSolution.path : _ants[currIterBestAntIdx].path;
-                int depositDist = useGlobal ? _currSolution.dist : _ants[currIterBestAntIdx].dist;
-
-                //Deposit pheromone
-                depositPheromone(depositingPath, depositDist);
             }
+
+            //Evaporate pheromones
+            evaporatePheromone();
+
+            //Choose iter best or global best path to deposit pheromone
+            bool useGlobal = (iter % numItersPerGlobalBestForPheromone == 0);
+            const std::vector<int>& depositingPath = useGlobal ? _currSolution.path : _ants[currIterBestAntIdx].path;
+            int depositDist = useGlobal ? _currSolution.dist : _ants[currIterBestAntIdx].dist;
+
+            //Deposit pheromone
+            depositPheromone(depositingPath, depositDist);
         }
     }
 
