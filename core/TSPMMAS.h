@@ -45,13 +45,8 @@ public:
         _currSolution.calculateDist(adjMat);
 
         //Init _tauMin and _tauMax
-        _tauMax = 1.0f / (_rho * _currSolution.dist);
-
         double pBest = 0.05f;
-        double pRoot = pow(pBest, 1.0f / nCities);
-        double avg = nCities / 2.0f;
-
-        _tauMin = _tauMax * (1 - pRoot) / ((avg - 1) * pRoot);
+        updateTauMinAndTauMax(pBest, nCities);
 
         //Init pheromone matrix with _tauMax
         _pheromone.assign(nCities, std::vector<double>(nCities, _tauMax));
@@ -243,7 +238,14 @@ private:
         _pheromone[v][u] = _pheromone[u][v];
     }
 
+    void updateTauMinAndTauMax(double pBest, int nCities)
+    {
+        double pRoot = pow(pBest, 1.0 / nCities);
+        double avg = nCities / 2.0;
 
+        _tauMax = 1.0 / (_rho * _currSolution.dist);
+        _tauMin = _tauMax * (1 - pRoot) / ((avg - 1) * pRoot);
+    }
 
     //Normalize a path to start at the start city
     void normalizePathToStart(std::vector<int>& path, int startCity = 0)
