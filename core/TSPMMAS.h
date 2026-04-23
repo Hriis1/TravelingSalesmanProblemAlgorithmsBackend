@@ -32,8 +32,8 @@ private:
 
 public:
 
-    TSPMMAS(int numAnts, int numIterations, double alpha, double beta, double rho, unsigned int seed = std::random_device{}()) 
-        :TSPAlgo(seed), _numAnts(numAnts), _ants(numAnts), _numIterations(numIterations), _alpha(alpha), _beta(beta), _rho(rho)
+    TSPMMAS(int numAnts, int numIterations, double alpha, double beta, double rho, int nnoimpr = INT_MAX, unsigned int seed = std::random_device{}())
+        :TSPAlgo(seed), _numAnts(numAnts), _ants(numAnts), _numIterations(numIterations), _alpha(alpha), _beta(beta), _rho(rho), _nnoimpr(nnoimpr)
     {}
 
     void solve(const std::vector<std::vector<int>>& adjMat) override
@@ -66,12 +66,17 @@ public:
 
         //Iterate for _numIterations for each ant
         int startCity = 0;
+        int itersWithNoImprovement = 0;
         int numItersPerGlobalBestForPheromone = 10;
         for (size_t iter = 0; iter < _numIterations; iter++)
         {
             int currIterBestDist = INT_MAX;
             int currIterBestAntIdx = -1;
 
+            //update iters with no improvement
+            ++itersWithNoImprovement;
+
+            //Ants loop
             for (size_t a = 0; a < _numAnts; a++)
             {
                 auto& currAnt = _ants[a];
@@ -95,12 +100,27 @@ public:
                         //update best
                         _currSolution.path = currAnt.path;
                         _currSolution.dist = currAnt.dist;
+
+                        //Reset iters with no improvement
+                        itersWithNoImprovement = 0;
                     }
                 }
             }
 
-            //update tauMin and tauMax
-            updateTauMinAndTauMax(pBest, nCities);
+            //If a new global best was found
+            if (itersWithNoImprovement == 0) {
+                //update tauMin and tauMax
+                updateTauMinAndTauMax(pBest, nCities);
+            }
+
+            //If algo got stuck with no improvements over many iterations
+            if (itersWithNoImprovement >= _nnoimpr)
+            {
+                //reset _pheromones to _tauMax
+                resetPheromones();
+                itersWithNoImprovement = 0;
+                continue;
+            }
 
             //Evaporate pheromones - compares with _tauMin
             evaporatePheromone();
@@ -251,6 +271,15 @@ private:
         _tauMin = _tauMax * (1 - pRoot) / ((avg - 1) * pRoot);
     }
 
+    void resetPheromones()
+    {
+        int n = _pheromone.size();
+
+        for (int i = 0; i < n; i++) {
+            std::fill(_pheromone[i].begin(), _pheromone[i].end(), _tauMax);
+        }
+    }
+
     //Normalize a path to start at the start city
     void normalizePathToStart(std::vector<int>& path, int startCity = 0)
     {
@@ -272,6 +301,7 @@ private:
     double _tauMax = 0;
 
     int _globalBestFreq = 10;
+    int _nnoimpr = INT_MAX;
 
     std::vector<Ant> _ants;
     std::vector<std::vector<double>> _pheromone;
