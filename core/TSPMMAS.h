@@ -95,14 +95,14 @@ public:
                         //update best
                         _currSolution.path = currAnt.path;
                         _currSolution.dist = currAnt.dist;
-
-                        //update tauMin and tauMax
-                        updateTauMinAndTauMax(pBest, nCities);
                     }
                 }
             }
 
-            //Evaporate pheromones
+            //update tauMin and tauMax
+            updateTauMinAndTauMax(pBest, nCities);
+
+            //Evaporate pheromones - compares with _tauMin
             evaporatePheromone();
 
             //Choose iter best or global best path to deposit pheromone
@@ -110,7 +110,7 @@ public:
             const std::vector<int>& depositingPath = useGlobal ? _currSolution.path : _ants[currIterBestAntIdx].path;
             int depositDist = useGlobal ? _currSolution.dist : _ants[currIterBestAntIdx].dist;
 
-            //Deposit pheromone
+            //Deposit pheromone  - compares with _tauMax
             depositPheromone(depositingPath, depositDist);
         }
     }
