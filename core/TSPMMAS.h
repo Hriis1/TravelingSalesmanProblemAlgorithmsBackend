@@ -136,6 +136,9 @@ public:
             //Deposit pheromone  - compares with _tauMax
             depositPheromone(depositingPath, depositDist);
         }
+
+        //Make city 0 the starting city of the best tour
+        normalizePathToStart(_currSolution.path, 0);
     }
 
 private:
@@ -211,6 +214,8 @@ private:
                 }
             }
         }
+
+        return nextCity;
     }
 
     void evaporatePheromone()
