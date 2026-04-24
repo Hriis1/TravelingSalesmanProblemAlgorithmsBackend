@@ -30,6 +30,35 @@ public:
 		return _currSolution.path;
 	}
 protected:
+	void twoOpt(std::vector<int>& path, const std::vector<std::vector<int>>& adjMat)
+	{
+		int n = path.size();
+		bool improved = true;
+
+		while (improved) {
+			improved = false;
+
+			for (int i = 1; i < n - 1; i++) {
+				for (int j = i + 1; j < n; j++) {
+
+					int a = path[i - 1];
+					int b = path[i];
+					int c = path[j];
+					int d = path[(j + 1) % n];
+
+					int oldDist = adjMat[a][b] + adjMat[c][d];
+					int newDist = adjMat[a][c] + adjMat[b][d];
+
+					if (newDist < oldDist) {
+						//reverse segment [i, j]
+						std::reverse(path.begin() + i, path.begin() + j + 1);
+						improved = true;
+					}
+				}
+			}
+		}
+	}
+protected:
 	TSPSolution _currSolution;
 	std::mt19937 _gen;
 };

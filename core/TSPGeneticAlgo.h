@@ -426,35 +426,6 @@ private:
 		return currBestIdx;
 	}
 
-	void twoOpt(std::vector<int>& sol, const std::vector<std::vector<int>>& adjMat)
-	{
-		int n = sol.size();
-		bool improved = true;
-
-		while (improved) {
-			improved = false;
-
-			for (int i = 1; i < n - 1; i++) {
-				for (int j = i + 1; j < n; j++) {
-
-					int a = sol[i - 1];
-					int b = sol[i];
-					int c = sol[j];
-					int d = sol[(j + 1) % n];
-
-					int oldDist = adjMat[a][b] + adjMat[c][d];
-					int newDist = adjMat[a][c] + adjMat[b][d];
-
-					if (newDist < oldDist) {
-						//reverse segment [i, j]
-						std::reverse(sol.begin() + i, sol.begin() + j + 1);
-						improved = true;
-					}
-				}
-			}
-		}
-	}
-
 	int _NG = 0;
 	int _NPOP = 0;
 	int _NNOIMPR = 0;
