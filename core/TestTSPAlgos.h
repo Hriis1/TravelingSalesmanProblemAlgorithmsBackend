@@ -42,16 +42,13 @@ void printMatrix(const std::vector<std::vector<int>>& mat)
 	}
 }
 
-int testGeneticAlgo()
+int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, int nnoimpr, float pc, float pm)
 {
 	//If brute force should be done
 	bool doBruteForce = false;
 
 	//If initial gen should be inited with NN
 	bool initWithNN = true;
-
-	//Number of runs to do
-	const int nRuns = 10;
 
 	//Input adj matrix
 	std::vector<std::vector<int>> adjMat;
@@ -66,7 +63,7 @@ int testGeneticAlgo()
 	for (size_t i = 0; i < nRuns; i++)
 	{
 		std::cout << "Genereting matrix..." << std::endl;
-		adjMat = TSPUtils::generateTspAdjMatrix(100, TSPUtils::TspDatasetType::RandomUniform);
+		adjMat = TSPUtils::generateTspAdjMatrix(nCities, TSPUtils::TspDatasetType::RandomUniform, planeSize);
 		std::cout << "Matrix generated!" << std::endl;
 
 		//Print the matrix
@@ -82,18 +79,6 @@ int testGeneticAlgo()
 
 		//Nubmer of cities
 		const int nCities = adjMat.size();
-
-		//Set up params;
-		int ng = 0; //number of generation
-		int npop = 0; //number of children in a generation
-		int nnoimpr = 0; //after how many generations with no improvement to stop
-		float pc = 0.90f; //probability of crossover
-		float pm = 0.05f; //probability of mutation
-
-		//set up params based on num cities
-		ng = 500;
-		npop = 100;
-		nnoimpr = 100;
 
 		//Solve - unseeded
 		TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
