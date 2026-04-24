@@ -88,6 +88,9 @@ public:
                 //Ant tour
                 doAntTour(currAnt, adjMat);
 
+                //2opt optimization
+                twoOpt(currAnt.path, adjMat);
+
                 //Update iteration and global best
                 if (currAnt.dist < currIterBestDist)
                 {
