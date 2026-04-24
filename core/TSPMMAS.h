@@ -91,6 +91,9 @@ public:
                 //2opt optimization
                 twoOpt(currAnt.path, adjMat);
 
+                //Calculate the dist of the path after 2opt
+                currAnt.dist = calculatePathDist(currAnt.path, adjMat);
+
                 //Update iteration and global best
                 if (currAnt.dist < currIterBestDist)
                 {

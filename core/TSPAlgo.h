@@ -58,6 +58,23 @@ protected:
 			}
 		}
 	}
+
+	int calculatePathDist(const std::vector<int>& path, const std::vector<std::vector<int>>& adjMat)
+	{
+		int n = path.size();
+		if (n == 0) return 0;
+
+		int dist = 0;
+
+		for (int i = 0; i < n - 1; i++) {
+			dist += adjMat[path[i]][path[i + 1]];
+		}
+
+		// return to start
+		dist += adjMat[path[n - 1]][path[0]];
+
+		return dist;
+	}
 protected:
 	TSPSolution _currSolution;
 	std::mt19937 _gen;
