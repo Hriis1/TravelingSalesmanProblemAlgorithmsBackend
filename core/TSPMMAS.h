@@ -46,7 +46,7 @@ public:
         _weights.reserve(nCities);
 
         //Compute _nearestNeighbors
-        initNearestNeighbors(adjMat, nNearestNeighborsMax);
+        initNearestNeighborCandidates(adjMat, nNearestNeighborsMax);
 
         //Initial solution using nearst neighbor
         _currSolution.path = TSPUtils::nearestNeighborPath(adjMat);
@@ -195,8 +195,7 @@ private:
 
         double sum = 0;
 
-        // build candidates + weights
-        for (int j = 0; j < nCities; j++) {
+        auto addCandidateFunc = [&](int i, int j) {
             if (!ant.visited[j]) {
                 double tau = _pheromone[i][j];
                 double eta = _heuristic[i][j];
@@ -208,6 +207,23 @@ private:
                 _candidates.push_back(j);
                 _weights.push_back(w);
                 sum += w;
+            }
+        };
+
+        //build candidates + weights from nearest neighbors
+        for (size_t j = 0; j < _nearestNeighborCandidates[i].size(); j++)
+        {
+            int city = _nearestNeighborCandidates[i][j];
+            addCandidateFunc(i, city);
+        }
+
+
+        //Fall back for when all nearest neighbors are visited
+        if (_candidates.empty()) {
+            // build candidates + weights from all cities
+            for (int j = 0; j < nCities; j++) {
+
+                addCandidateFunc(i, j);
             }
         }
 
@@ -295,12 +311,12 @@ private:
         }
     }
 
-    void initNearestNeighbors(const std::vector<std::vector<int>>& adjMat, int nNeighbors)
+    void initNearestNeighborCandidates(const std::vector<std::vector<int>>& adjMat, int nNeighbors)
     {
         int n = adjMat.size();
         int k = std::min(nNeighbors, n - 1);
 
-        _nearestNeighbors.assign(n, std::vector<int>());
+        _nearestNeighborCandidates.assign(n, std::vector<int>());
 
         std::vector<int> all;
         all.reserve(n - 1);
@@ -319,7 +335,7 @@ private:
                     return adjMat[i][a] < adjMat[i][b];
                 });
 
-            _nearestNeighbors[i].assign(all.begin(), all.begin() + k);
+            _nearestNeighborCandidates[i].assign(all.begin(), all.begin() + k);
         }
     }
 
@@ -351,7 +367,7 @@ private:
     std::vector<std::vector<double>> _heuristic;
 
     //Used in chooseNextCity when ant does tours
-    std::vector<std::vector<int>> _nearestNeighbors;
+    std::vector<std::vector<int>> _nearestNeighborCandidates;
     std::vector<int> _candidates;
     std::vector<double> _weights;
 };
