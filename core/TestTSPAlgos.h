@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
+#include <chrono>
 
 #include "../core/TSPGeneticAlgo.h"
 #include "../core/TSPMMAS.h"
@@ -52,6 +53,7 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 	int genAvg = 0;
 	int nearestNeighborAvg = 0;
 	int optimalAvg = 0;
+	long long msPassedTotal = 0;
 
 	//Generate the matrix
 	std::cout << "Running genetic algorithm and nearest neighbor " << nRuns << " times..." << std::endl;
@@ -73,9 +75,16 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 			return 0;
 		}
 
-
 		//Solve - unseeded
+		auto start = std::chrono::high_resolution_clock::now();
 		tspSolver->solve(adjMat);
+		auto end = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		long long msPassed = duration.count();
+		msPassedTotal += msPassed;
+
+		//Output time passed
+		std::cout << "TSP Solved in: " << msPassed << " ms" << std::endl;
 
 		//Output path and dist
 		int genDist = tspSolver->getCurrSolutionDist();
@@ -94,6 +103,8 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 			std::cout << "Optimal dist (start city 0): " << optimalDist << std::endl;
 			optimalAvg += optimalDist;
 		}
+
+		std::cout << std::endl << std::endl;
 	}
 
 	//Do avg and display
@@ -103,11 +114,13 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 	std::cout << std::endl << std::endl << "Genetic algo avg: " << genAvg << std::endl << "Nearest neighbor avg: " << nearestNeighborAvg << std::endl;
 	std::cout << "% decreese in tour lenght from NN: " << (pDecrease * 100) << "%" << std::endl;
 
+
 	if (doBruteForce) {
 		optimalAvg /= nRuns;
 		pDecrease = (float)genAvg / optimalAvg;
 		std::cout << std::endl << std::endl << "Optimal avg: " << optimalAvg << std::endl;
 		std::cout << "% decreese in tour lenght from OPTIMAL: " << (pDecrease * 100) << "%";
+		std::cout << "Avg time to solve TSP: " << msPassedTotal/nRuns << " ms" << std::endl;
 	}
 
 	return 1;
