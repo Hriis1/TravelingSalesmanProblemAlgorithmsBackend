@@ -40,6 +40,10 @@ public:
     {
         int nCities = adjMat.size();
 
+        //Init
+        _candidates.reserve(nCities);
+        _weights.reserve(nCities);
+
         //Initial solution using nearst neighbor
         _currSolution.path = TSPUtils::nearestNeighborPath(adjMat);
         _currSolution.calculateDist(adjMat);
@@ -182,55 +186,39 @@ private:
     {
         int i = ant.currentCityIdx;
 
-        // compute weights
-        double sum = 0;
-        std::vector<double> weights(nCities, 0);
+        _candidates.clear();
+        _weights.clear();
 
+        double sum = 0;
+
+        // build candidates + weights
         for (int j = 0; j < nCities; j++) {
             if (!ant.visited[j]) {
                 double tau = _pheromone[i][j];
                 double eta = _heuristic[i][j];
 
-                double w;
+                double w = (_alpha == 1.0 && _beta == 2.0)
+                    ? tau * (eta * eta)
+                    : pow(tau, _alpha) * pow(eta, _beta);
 
-                if (_alpha == 1.0 && _beta == 2.0) {
-                    w = tau * (eta * eta);
-                }
-                else {
-                    w = pow(tau, _alpha) * pow(eta, _beta);
-                }
-
-                weights[j] = w;
+                _candidates.push_back(j);
+                _weights.push_back(w);
                 sum += w;
             }
         }
 
-        // pick next city (roulette)
+        // roulette selection
         double r = std::uniform_real_distribution<>(0.0, sum)(_gen);
         double cum = 0;
-        int nextCity = -1;
 
-        for (int j = 0; j < nCities; j++) {
-            if (!ant.visited[j]) {
-                cum += weights[j];
-                if (cum >= r) {
-                    nextCity = j;
-                    break;
-                }
-            }
+        for (size_t k = 0; k < _candidates.size(); k++) {
+            cum += _weights[k];
+            if (cum >= r)
+                return _candidates[k];
         }
 
-        // safety fallback (rare floating issue)
-        if (nextCity == -1) {
-            for (int j = 0; j < nCities; j++) {
-                if (!ant.visited[j]) {
-                    nextCity = j;
-                    break;
-                }
-            }
-        }
-
-        return nextCity;
+        // fallback (safety)
+        return _candidates.back();
     }
 
     void evaporatePheromone()
@@ -329,4 +317,8 @@ private:
     std::vector<Ant> _ants;
     std::vector<std::vector<double>> _pheromone;
     std::vector<std::vector<double>> _heuristic;
+
+    //Used in chooseNextCity when ant does tours
+    std::vector<int> _candidates;
+    std::vector<double> _weights;
 };
