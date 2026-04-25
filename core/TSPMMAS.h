@@ -347,6 +347,169 @@ private:
             std::rotate(path.begin(), it, path.end());
     }
 
+    //Unused 3opt
+    void buildPos(const std::vector<int>& tour, std::vector<int>& pos)
+    {
+        int n = tour.size();
+        pos.resize(n);
+
+        for (int i = 0; i < n; i++)
+            pos[tour[i]] = i;
+    }
+
+    bool threeOptMove(std::vector<int>& tour,
+        const std::vector<std::vector<int>>& d,
+        int i, int j, int k)
+    {
+        int n = tour.size();
+
+        int a = tour[i];
+        int b = tour[(i + 1) % n];
+        int c = tour[j];
+        int d1 = tour[(j + 1) % n];
+        int e = tour[k];
+        int f = tour[(k + 1) % n];
+
+        int oldCost = d[a][b] + d[c][d1] + d[e][f];
+
+        int bestDelta = 0;
+        int bestCase = -1;
+
+        int deltas[7] = {
+            d[a][c] + d[b][d1] + d[e][f] - oldCost,
+            d[a][b] + d[c][e] + d[d1][f] - oldCost,
+            d[a][e] + d[d1][b] + d[c][f] - oldCost,
+            d[a][c] + d[b][e] + d[d1][f] - oldCost,
+            d[a][d1] + d[e][b] + d[c][f] - oldCost,
+            d[a][e] + d[d1][c] + d[b][f] - oldCost,
+            d[a][d1] + d[e][c] + d[b][f] - oldCost
+        };
+
+        for (int t = 0; t < 7; t++) {
+            if (deltas[t] < bestDelta) {
+                bestDelta = deltas[t];
+                bestCase = t;
+            }
+        }
+
+        if (bestCase == -1)
+            return false;
+
+        std::vector<int> replacement;
+        replacement.reserve(k - i);
+
+        auto appendForward = [&](int first, int last) {
+            for (int idx = first; idx <= last; idx++)
+                replacement.push_back(tour[idx]);
+        };
+
+        auto appendReverse = [&](int first, int last) {
+            for (int idx = last; idx >= first; idx--)
+                replacement.push_back(tour[idx]);
+        };
+
+        int bStart = i + 1;
+        int bEnd = j;
+        int cStart = j + 1;
+        int cEnd = k;
+
+        switch (bestCase)
+        {
+        case 0:
+            appendReverse(bStart, bEnd);
+            appendForward(cStart, cEnd);
+            break;
+
+        case 1:
+            appendForward(bStart, bEnd);
+            appendReverse(cStart, cEnd);
+            break;
+
+        case 2:
+            appendReverse(cStart, cEnd);
+            appendForward(bStart, bEnd);
+            break;
+
+        case 3:
+            appendReverse(bStart, bEnd);
+            appendReverse(cStart, cEnd);
+            break;
+
+        case 4:
+            appendForward(cStart, cEnd);
+            appendForward(bStart, bEnd);
+            break;
+
+        case 5:
+            appendReverse(cStart, cEnd);
+            appendReverse(bStart, bEnd);
+            break;
+
+        case 6:
+            appendForward(cStart, cEnd);
+            appendReverse(bStart, bEnd);
+            break;
+        }
+
+        std::copy(replacement.begin(), replacement.end(), tour.begin() + i + 1);
+
+        return true;
+    }
+
+    void threeOpt(std::vector<int>& tour,
+        const std::vector<std::vector<int>>& adjMat)
+    {
+        int n = tour.size();
+
+        std::vector<int> pos(tour.size());
+
+        buildPos(tour, pos);
+
+        std::vector<bool> dontLook(n, false);
+
+        bool improved = true;
+
+        while (improved)
+        {
+            improved = false;
+
+            for (int i = 0; i < n; i++)
+            {
+                int a = tour[i];
+                if (dontLook[a]) continue;
+
+                bool improvedHere = false;
+
+                for (int bCity : _nearestNeighborCandidates[a])
+                {
+                    int j = pos[bCity];
+                    if (j <= i + 1 || j >= n - 1) continue;
+
+                    for (int cCity : _nearestNeighborCandidates[bCity])
+                    {
+                        int k = pos[cCity];
+                        if (k <= j + 1 || k >= n) continue;
+
+                        if (threeOptMove(tour, adjMat, i, j, k))
+                        {
+                            buildPos(tour, pos);
+                            std::fill(dontLook.begin(), dontLook.end(), false);
+
+                            improved = true;
+                            improvedHere = true;
+                            break;
+                        }
+                    }
+
+                    if (improvedHere) break;
+                }
+
+                if (!improvedHere)
+                    dontLook[a] = true;
+            }
+        }
+    }
+
 private:
     int _numAnts = 0;        // number of ants per iteration
     int _numIterations = 0;  // total iterations
