@@ -5,6 +5,7 @@
 #include <iomanip>
 
 #include "../core/TSPGeneticAlgo.h"
+#include "../core/TSPMMAS.h"
 #include "../core/TSPUtils.h"
 
 void outputPath(const std::vector<int>& path)
@@ -42,14 +43,8 @@ void printMatrix(const std::vector<std::vector<int>>& mat)
 	}
 }
 
-int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, int nnoimpr, float pc, float pm)
+int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlgo* tspSolver)
 {
-	//If brute force should be done
-	bool doBruteForce = false;
-
-	//If initial gen should be inited with NN
-	bool initWithNN = true;
-
 	//Input adj matrix
 	std::vector<std::vector<int>> adjMat;
 
@@ -62,6 +57,7 @@ int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, int
 	std::cout << "Running genetic algorithm and nearest neighbor " << nRuns << " times..." << std::endl;
 	for (size_t i = 0; i < nRuns; i++)
 	{
+		//Generate the matrix
 		std::cout << "Genereting matrix..." << std::endl;
 		adjMat = TSPUtils::generateTspAdjMatrix(nCities, TSPUtils::TspDatasetType::RandomUniform, planeSize);
 		std::cout << "Matrix generated!" << std::endl;
@@ -74,21 +70,18 @@ int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, int
 		if (adjMat.size() == 0 || (adjMat.size() != adjMat[0].size()))
 		{
 			std::cout << "Invalid input!" << std::endl;
-			return -1;
+			return 0;
 		}
 
-		//Nubmer of cities
-		const int nCities = adjMat.size();
 
 		//Solve - unseeded
-		TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
-		tsp.solve(adjMat);
+		tspSolver->solve(adjMat);
 
 		//Output path and dist
-		int genDist = tsp.getCurrSolutionDist();
+		int genDist = tspSolver->getCurrSolutionDist();
 		int nearestNeighborDist = TSPUtils::nearestNeighborDistance(adjMat, 0);
 		std::cout << "Path: " << std::endl;
-		outputPath(tsp.getCurrSolutionPath());
+		outputPath(tspSolver->getCurrSolutionPath());
 		std::cout << "Dist: " << genDist << std::endl;
 		std::cout << "Nearest-neighbor dist (start city 0): " << nearestNeighborDist << std::endl;
 
@@ -117,5 +110,23 @@ int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, int
 		std::cout << "% decreese in tour lenght from OPTIMAL: " << (pDecrease * 100) << "%";
 	}
 
-	return 0;
+	return 1;
+}
+
+int testMMAS(int nCities, int planeSize, int nRuns, int nIters, double alpha, double beta, double rho, int nnoimpr, bool doBruteForce)
+{
+	//Init solver
+	TSPMMAS tsp = TSPMMAS(nCities, nIters, alpha, beta, rho, nnoimpr);
+
+	//Solve and display results
+	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp);
+}
+
+int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, float pc, float pm, int nnoimpr, bool doBruteForce, bool initWithNN)
+{
+	//Init solver
+	TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
+
+	//Solve and display results
+	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp);
 }

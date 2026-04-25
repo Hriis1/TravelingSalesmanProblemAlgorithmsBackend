@@ -9,7 +9,10 @@
 int main() 
 {
 	//Run genetic algo
-	testGeneticAlgo(100, 1000, 10, 500, 100, 100, 0.90f, 0.05f);
+	//testGeneticAlgo(100, 1000, 10, 500, 100, 0.90f, 0.05f, 100, false, true);
+
+	//Run MMAS
+	testMMAS(100, 1000, 10, 500, 1, 2, 0.5, 100, false);
 
 	std::cin.get();
 	return 0;
