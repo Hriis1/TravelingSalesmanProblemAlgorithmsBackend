@@ -39,10 +39,14 @@ public:
     void solve(const std::vector<std::vector<int>>& adjMat) override
     {
         int nCities = adjMat.size();
+        int nNearestNeighborsMax = 20;
 
         //Init
         _candidates.reserve(nCities);
         _weights.reserve(nCities);
+
+        //Compute _nearestNeighbors
+        initNearestNeighbors(adjMat, nNearestNeighborsMax);
 
         //Initial solution using nearst neighbor
         _currSolution.path = TSPUtils::nearestNeighborPath(adjMat);
@@ -62,7 +66,7 @@ public:
             for (size_t x = 0; x < nCities; x++)
             {
                 if (y != x && adjMat[y][x] > 0)
-                    _heuristic[y][x] = 1.0f / adjMat[y][x];
+                    _heuristic[y][x] = 1.0 / adjMat[y][x];
                 else
                     _heuristic[y][x] = 0;
             }
@@ -291,6 +295,34 @@ private:
         }
     }
 
+    void initNearestNeighbors(const std::vector<std::vector<int>>& adjMat, int nNeighbors)
+    {
+        int n = adjMat.size();
+        int k = std::min(nNeighbors, n - 1);
+
+        _nearestNeighbors.assign(n, std::vector<int>());
+
+        std::vector<int> all;
+        all.reserve(n - 1);
+
+        for (int i = 0; i < n; i++)
+        {
+            all.clear();
+
+            for (int j = 0; j < n; j++) {
+                if (j != i)
+                    all.push_back(j);
+            }
+
+            std::partial_sort(all.begin(), all.begin() + k, all.end(),
+                [&](int a, int b) {
+                    return adjMat[i][a] < adjMat[i][b];
+                });
+
+            _nearestNeighbors[i].assign(all.begin(), all.begin() + k);
+        }
+    }
+
     //Normalize a path to start at the start city
     void normalizePathToStart(std::vector<int>& path, int startCity = 0)
     {
@@ -319,6 +351,7 @@ private:
     std::vector<std::vector<double>> _heuristic;
 
     //Used in chooseNextCity when ant does tours
+    std::vector<std::vector<int>> _nearestNeighbors;
     std::vector<int> _candidates;
     std::vector<double> _weights;
 };

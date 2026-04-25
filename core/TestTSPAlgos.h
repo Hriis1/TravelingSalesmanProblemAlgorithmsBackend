@@ -4,6 +4,7 @@
 #include <vector>
 #include <iomanip>
 #include <chrono>
+#include <string>
 
 #include "../core/TSPGeneticAlgo.h"
 #include "../core/TSPMMAS.h"
@@ -44,7 +45,7 @@ void printMatrix(const std::vector<std::vector<int>>& mat)
 	}
 }
 
-int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlgo* tspSolver)
+int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlgo* tspSolver, const std::string& algoName)
 {
 	//Input adj matrix
 	std::vector<std::vector<int>> adjMat;
@@ -56,7 +57,7 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 	long long msPassedTotal = 0;
 
 	//Generate the matrix
-	std::cout << "Running genetic algorithm and nearest neighbor " << nRuns << " times..." << std::endl;
+	std::cout << "Running " << algoName  << " and nearest neighbor " << nRuns << " times..." << std::endl;
 	for (size_t i = 0; i < nRuns; i++)
 	{
 		//Generate the matrix
@@ -112,7 +113,8 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 	nearestNeighborAvg /= nRuns;
 	float pDecrease = (float)genAvg / nearestNeighborAvg;
 	std::cout << std::endl << std::endl << "Genetic algo avg: " << genAvg << std::endl << "Nearest neighbor avg: " << nearestNeighborAvg << std::endl;
-	std::cout << "% decreese in tour lenght from NN: " << (pDecrease * 100) << "%" << std::endl;
+	std::cout << "On avg " << algoName << " tour is " << (pDecrease * 100) << "% of the NN tour length" << std::endl;
+	std::cout << "Avg time to solve TSP: " << msPassedTotal / nRuns << " ms" << std::endl;
 
 
 	if (doBruteForce) {
@@ -120,7 +122,6 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 		pDecrease = (float)genAvg / optimalAvg;
 		std::cout << std::endl << std::endl << "Optimal avg: " << optimalAvg << std::endl;
 		std::cout << "% decreese in tour lenght from OPTIMAL: " << (pDecrease * 100) << "%";
-		std::cout << "Avg time to solve TSP: " << msPassedTotal/nRuns << " ms" << std::endl;
 	}
 
 	return 1;
@@ -132,7 +133,7 @@ int testMMAS(int nCities, int planeSize, int nRuns, int nIters, double alpha, do
 	TSPMMAS tsp = TSPMMAS(nCities, nIters, alpha, beta, rho, nnoimpr);
 
 	//Solve and display results
-	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp);
+	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp, "MMAS");
 }
 
 int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, float pc, float pm, int nnoimpr, bool doBruteForce, bool initWithNN)
@@ -141,5 +142,5 @@ int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, flo
 	TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
 
 	//Solve and display results
-	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp);
+	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp, "Genetic algorithm");
 }
