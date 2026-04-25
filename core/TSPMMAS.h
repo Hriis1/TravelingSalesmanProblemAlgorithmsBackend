@@ -87,12 +87,6 @@ public:
                 //Ant tour
                 doAntTour(currAnt, adjMat);
 
-                //2opt optimization
-                twoOpt(currAnt.path, adjMat);
-
-                //Calculate the dist of the path after 2opt
-                currAnt.dist = calculatePathDist(currAnt.path, adjMat);
-
                 //Update iteration and global best
                 if (currAnt.dist < currIterBestDist)
                 {
@@ -110,6 +104,25 @@ public:
                         itersWithNoImprovement = 0;
                     }
                 }
+            }
+
+            Ant& bestOfIter = _ants[currIterBestAntIdx];
+
+            //2opt optimization for best ant or iter
+            twoOpt(bestOfIter.path, adjMat);
+
+            //Calculate the dist of the path after 2opt
+            bestOfIter.dist = calculatePathDist(bestOfIter.path, adjMat);
+
+            //update global best if it beats it
+            if (bestOfIter.dist < _currSolution.dist)
+            {
+                //update best
+                _currSolution.path = bestOfIter.path;
+                _currSolution.dist = bestOfIter.dist;
+
+                //Reset iters with no improvement
+                itersWithNoImprovement = 0;
             }
 
             //If a new global best was found
