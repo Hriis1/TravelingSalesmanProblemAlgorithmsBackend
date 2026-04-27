@@ -12,7 +12,7 @@ int main()
 	//testGeneticAlgo(100, 1000, 10, 500, 100, 0.90f, 0.05f, 100, false, true);
 
 	//Run MMAS
-	testMMAS(100, 1000, 10, 1000, 1, 2, 0.5, 100, false);
+	testMMAS(100, 1000, 10, 500, 1, 2, 0.5, 100, false);
 
 	std::cin.get();
 	return 0;

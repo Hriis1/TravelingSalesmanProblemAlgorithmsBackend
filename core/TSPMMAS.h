@@ -56,19 +56,25 @@ public:
         double pBest = 0.05f;
         updateTauMinAndTauMax(pBest, nCities);
 
-        //Init pheromone matrix with _tauMax
+        //Init pheromone matrices with _tauMax
+        double tauMaxPowAlpha = pow(_tauMax, _alpha);
         _pheromone.assign(nCities, std::vector<double>(nCities, _tauMax));
+        _pheromonePowAlpha.assign(nCities, std::vector<double>(nCities, tauMaxPowAlpha));
 
-        //Init the heuristic matrix with 1/<dist between cities>
+        //Init the heuristi matrices with 1/<dist between cities>
         _heuristic.assign(nCities, std::vector<double>(nCities));
+        _heuristicPowBeta = _heuristic;
         for (size_t y = 0; y < nCities; y++)
         {
             for (size_t x = 0; x < nCities; x++)
             {
-                if (y != x && adjMat[y][x] > 0)
+                if (y != x && adjMat[y][x] > 0) {
                     _heuristic[y][x] = 1.0 / adjMat[y][x];
-                else
+                    _heuristicPowBeta[y][x] = pow(_heuristic[y][x], _beta);
+                }
+                else {
                     _heuristic[y][x] = 0;
+                }
             }
         }
 
@@ -197,12 +203,8 @@ private:
 
         auto addCandidateFunc = [&](int i, int j) {
             if (!ant.visited[j]) {
-                double tau = _pheromone[i][j];
-                double eta = _heuristic[i][j];
 
-                double w = (_alpha == 1.0 && _beta == 2.0)
-                    ? tau * (eta * eta)
-                    : pow(tau, _alpha) * pow(eta, _beta);
+                double w = _pheromonePowAlpha[i][j] * _heuristicPowBeta[i][j];
 
                 _candidates.push_back(j);
                 _weights.push_back(w);
@@ -241,6 +243,7 @@ private:
         return _candidates.back();
     }
 
+    //Evaporates pheromone and updates the _pheromonePowAlpha matrix
     void evaporatePheromone()
     {
         int n = _pheromone.size();
@@ -256,6 +259,10 @@ private:
 
                 //matrix is mirrored
                 _pheromone[j][i] = _pheromone[i][j];
+
+                //update _pheromonePowAlpha
+                _pheromonePowAlpha[i][j] = pow(_pheromone[i][j], _alpha);
+                _pheromonePowAlpha[j][i] = _pheromonePowAlpha[i][j];
             }
         }
     }
@@ -278,6 +285,10 @@ private:
 
             //mirror
             _pheromone[v][u] = _pheromone[u][v];
+
+            //update _pheromonePowAlpha
+            _pheromonePowAlpha[u][v] = pow(_pheromone[u][v], _alpha);
+            _pheromonePowAlpha[v][u] = _pheromonePowAlpha[u][v];
         }
 
         int u = path.back();
@@ -291,6 +302,10 @@ private:
 
         //mirror
         _pheromone[v][u] = _pheromone[u][v];
+
+        //update _pheromonePowAlpha
+        _pheromonePowAlpha[u][v] = pow(_pheromone[u][v], _alpha);
+        _pheromonePowAlpha[v][u] = _pheromonePowAlpha[u][v];
     }
 
     void updateTauMinAndTauMax(double pBest, int nCities)
@@ -305,9 +320,11 @@ private:
     void resetPheromones()
     {
         int n = _pheromone.size();
+        double tauMaxPowAlpha = pow(_tauMax, _alpha);
 
         for (int i = 0; i < n; i++) {
             std::fill(_pheromone[i].begin(), _pheromone[i].end(), _tauMax);
+            std::fill(_pheromonePowAlpha[i].begin(), _pheromonePowAlpha[i].end(), tauMaxPowAlpha);
         }
     }
 
@@ -527,7 +544,9 @@ private:
 
     std::vector<Ant> _ants;
     std::vector<std::vector<double>> _pheromone;
+    std::vector<std::vector<double>> _pheromonePowAlpha;
     std::vector<std::vector<double>> _heuristic;
+    std::vector<std::vector<double>> _heuristicPowBeta;
 
     //Used in chooseNextCity when ant does tours
     std::vector<std::vector<int>> _nearestNeighborCandidates;
