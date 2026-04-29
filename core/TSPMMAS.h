@@ -32,8 +32,8 @@ private:
 
 public:
 
-    TSPMMAS(int numAnts, int numIterations, double alpha, double beta, double rho, int nnoimpr = INT_MAX, unsigned int seed = std::random_device{}())
-        :TSPAlgo(seed), _numAnts(numAnts), _ants(numAnts), _numIterations(numIterations), _alpha(alpha), _beta(beta), _rho(rho), _nnoimpr(nnoimpr)
+    TSPMMAS(int numIterations, double alpha, double beta, double rho, int nnoimpr = INT_MAX, unsigned int seed = std::random_device{}())
+        :TSPAlgo(seed), _numIterations(numIterations), _alpha(alpha), _beta(beta), _rho(rho), _nnoimpr(nnoimpr)
     {}
 
     void solve(const std::vector<std::vector<int>>& adjMat) override
@@ -42,6 +42,8 @@ public:
         int nNearestNeighborsMax = 20;
 
         //Init
+        _numAnts = nCities;
+        _ants.assign(_numAnts, Ant());
         _candidates.reserve(nCities);
         _weights.reserve(nCities);
 

@@ -9,6 +9,7 @@
 #include "../core/TSPGeneticAlgo.h"
 #include "../core/TSPMMAS.h"
 #include "../core/TSPUtils.h"
+#include "../core/TSPLibParser.h"
 
 void outputPath(const std::vector<int>& path)
 {
@@ -45,7 +46,7 @@ void printMatrix(const std::vector<std::vector<int>>& mat)
 	}
 }
 
-int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlgo* tspSolver, const std::string& algoName)
+int testTSPAlgoRand(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlgo* tspSolver, const std::string& algoName)
 {
 	//Input adj matrix
 	std::vector<std::vector<int>> adjMat;
@@ -127,13 +128,64 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 	return 1;
 }
 
-int testMMASRand(int nCities, int planeSize, int nRuns, int nIters, double alpha, double beta, double rho, int nnoimpr, bool doBruteForce)
+int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, const std::string& algoName)
 {
-	//Init solver
-	TSPMMAS tsp = TSPMMAS(nCities, nIters, alpha, beta, rho, nnoimpr);
+	const int nRuns = 10;
 
-	//Solve and display results
-	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp, "MMAS");
+	//Init the instance
+	auto instance = TSPLibParser::parseFile("../tsplib-master/" + tspInstance);
+
+	if (instance.optimalDist == -1)
+	{
+		std::cout << "No known optimal distance for instance: " << instance.name << std::endl;
+		return 0;
+	}
+
+	if (instance.adjMat.size() == 0 || instance.adjMat.size() != instance.adjMat[0].size())
+	{
+		std::cout << "Invalid TSPLIB instance matrix!" << std::endl;
+		return 0;
+	}
+
+	long long distTotal = 0;
+	long long msPassedTotal = 0;
+	double gapTotal = 0.0;
+
+
+	std::cout << "Running TSP instance " << algoName << " for " << instance.name << " " << nRuns << " times..." << std::endl;
+	std::cout << "Dimension: " << instance.dimension << std::endl;
+	std::cout << "Optimal dist: " << instance.optimalDist << std::endl << std::endl;
+
+	for (int i = 0; i < nRuns; i++)
+	{
+		//tspSolver->reseed(i + 1);
+
+		auto start = std::chrono::high_resolution_clock::now();
+		tspSolver->solve(instance.adjMat);
+		auto end = std::chrono::high_resolution_clock::now();
+
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		long long msPassed = duration.count();
+		int dist = tspSolver->getCurrSolutionDist();
+		double gap = 100.0 * (double)(dist - instance.optimalDist) / (double)instance.optimalDist;
+
+		distTotal += dist;
+		msPassedTotal += msPassed;
+		gapTotal += gap;
+
+		std::cout << "Run " << (i + 1) << ":" << std::endl;
+		std::cout << "Dist: " << dist << std::endl;
+		std::cout << "Time: " << msPassed << " ms" << std::endl;
+		std::cout << "Gap from optimal: " << std::fixed << std::setprecision(2) << gap << "%" << std::endl;
+		std::cout << std::endl;
+	}
+
+	std::cout << std::endl << "Averages:" << std::endl;
+	std::cout << "Avg dist: " << (double)distTotal / nRuns << std::endl;
+	std::cout << "Avg time: " << (double)msPassedTotal / nRuns << " ms" << std::endl;
+	std::cout << "Avg gap from optimal: " << std::fixed << std::setprecision(2) << gapTotal / nRuns << "%" << std::endl;
+
+	return 1;
 }
 
 int testGeneticAlgoRand(int nCities, int planeSize, int nRuns, int ng, int npop, float pc, float pm, int nnoimpr, bool doBruteForce, bool initWithNN)
@@ -142,5 +194,33 @@ int testGeneticAlgoRand(int nCities, int planeSize, int nRuns, int ng, int npop,
 	TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
 
 	//Solve and display results
-	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp, "Genetic algorithm");
+	return testTSPAlgoRand(nCities, planeSize, nRuns, doBruteForce, &tsp, "Genetic algorithm");
 }
+
+int testGeneticInstance(const std::string& instance, int ng, int npop, float pc, float pm, int nnoimpr, bool initWithNN)
+{
+	//Init solver
+	TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
+
+	//Solve and display results
+	return testTSPAlgoInstance(instance, &tsp, "MMAS");
+}
+
+int testMMASRand(int nCities, int planeSize, int nRuns, int nIters, double alpha, double beta, double rho, int nnoimpr, bool doBruteForce)
+{
+	//Init solver
+	TSPMMAS tsp = TSPMMAS(nIters, alpha, beta, rho, nnoimpr);
+
+	//Solve and display results
+	return testTSPAlgoRand(nCities, planeSize, nRuns, doBruteForce, &tsp, "MMAS");
+}
+
+int testMMASInstance(const std::string& instance, int nIters, double alpha, double beta, double rho, int nnoimpr) 
+{
+	//Init solver
+	TSPMMAS tsp = TSPMMAS(nIters, alpha, beta, rho, nnoimpr);
+
+	//Solve and display results
+	return testTSPAlgoInstance(instance, &tsp, "MMAS");
+}
+
