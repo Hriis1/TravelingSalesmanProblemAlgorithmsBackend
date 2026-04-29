@@ -112,7 +112,7 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 	genAvg /= nRuns;
 	nearestNeighborAvg /= nRuns;
 	float pDecrease = (float)genAvg / nearestNeighborAvg;
-	std::cout << std::endl << std::endl << "Genetic algo avg: " << genAvg << std::endl << "Nearest neighbor avg: " << nearestNeighborAvg << std::endl;
+	std::cout << std::endl << std::endl << algoName << " avg: " << genAvg << std::endl << "Nearest neighbor avg: " << nearestNeighborAvg << std::endl;
 	std::cout << "On avg " << algoName << " tour is " << (pDecrease * 100) << "% of the NN tour length" << std::endl;
 	std::cout << "Avg time to solve TSP: " << msPassedTotal / nRuns << " ms" << std::endl;
 
