@@ -22,6 +22,26 @@ namespace TSPUtils
         return (int)std::lround(std::sqrt(dx * dx + dy * dy));
     }
 
+    std::vector<std::vector<int>> buildAdjMatrixFromCoords(const std::vector<std::vector<double>>& coords)
+    {
+        int n = coords.size();
+        std::vector<std::vector<int>> adjMat(n, std::vector<int>(n, 0));
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                int d = distRoundedInt(
+                    coords[i][0], coords[i][1],
+                    coords[j][0], coords[j][1]
+                );
+
+                adjMat[i][j] = d;
+                adjMat[j][i] = d;
+            }
+        }
+
+        return adjMat;
+    }
+
     std::vector<std::vector<int>> generateTspAdjMatrix(unsigned int numCities, TspDatasetType type, int planeSize = 1000, unsigned int seed = std::random_device{}())
     {
         if (numCities < 2) return {};
