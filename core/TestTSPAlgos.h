@@ -131,59 +131,68 @@ int testTSPAlgoRand(int nCities, int planeSize, int nRuns, bool doBruteForce, TS
 int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, const std::string& algoName)
 {
 	const int nRuns = 10;
-
-	//Init the instance
-	auto instance = TSPLibParser::parseFile("../tsplib-master/" + tspInstance);
-
-	if (instance.optimalDist == -1)
+	try
 	{
-		std::cout << "No known optimal distance for instance: " << instance.name << std::endl;
+		//Init the instance
+		auto instance = TSPLibParser::parseFile("repo/tsplib-master/" + tspInstance);
+
+		if (instance.optimalDist == -1)
+		{
+			std::cout << "No known optimal distance for instance: " << instance.name << std::endl;
+			return 0;
+		}
+
+		if (instance.adjMat.size() == 0 || instance.adjMat.size() != instance.adjMat[0].size())
+		{
+			std::cout << "Invalid TSPLIB instance matrix!" << std::endl;
+			return 0;
+		}
+
+		long long distTotal = 0;
+		long long msPassedTotal = 0;
+		double gapTotal = 0.0;
+
+
+		std::cout << "Running TSP instance " << algoName << " for " << instance.name << " " << nRuns << " times..." << std::endl;
+		std::cout << "Dimension: " << instance.dimension << std::endl;
+		std::cout << "Optimal dist: " << instance.optimalDist << std::endl << std::endl;
+
+		for (int i = 0; i < nRuns; i++)
+		{
+			//tspSolver->reseed(i + 1);
+
+			auto start = std::chrono::high_resolution_clock::now();
+			tspSolver->solve(instance.adjMat);
+			auto end = std::chrono::high_resolution_clock::now();
+
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+			long long msPassed = duration.count();
+			int dist = tspSolver->getCurrSolutionDist();
+			double gap = 100.0 * (double)(dist - instance.optimalDist) / (double)instance.optimalDist;
+
+			distTotal += dist;
+			msPassedTotal += msPassed;
+			gapTotal += gap;
+
+			std::cout << "Run " << (i + 1) << ":" << std::endl;
+			std::cout << "Dist: " << dist << std::endl;
+			std::cout << "Time: " << msPassed << " ms" << std::endl;
+			std::cout << "Gap from optimal: " << std::fixed << std::setprecision(2) << gap << "%" << std::endl;
+			std::cout << std::endl;
+		}
+
+		std::cout << std::endl << "Averages:" << std::endl;
+		std::cout << "Avg dist: " << (double)distTotal / nRuns << std::endl;
+		std::cout << "Avg time: " << (double)msPassedTotal / nRuns << " ms" << std::endl;
+		std::cout << "Optimal dist: " << instance.optimalDist << std::endl << std::endl;
+		std::cout << "Avg gap from optimal: " << std::fixed << std::setprecision(2) << gapTotal / nRuns << "%" << std::endl;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
 		return 0;
 	}
-
-	if (instance.adjMat.size() == 0 || instance.adjMat.size() != instance.adjMat[0].size())
-	{
-		std::cout << "Invalid TSPLIB instance matrix!" << std::endl;
-		return 0;
-	}
-
-	long long distTotal = 0;
-	long long msPassedTotal = 0;
-	double gapTotal = 0.0;
-
-
-	std::cout << "Running TSP instance " << algoName << " for " << instance.name << " " << nRuns << " times..." << std::endl;
-	std::cout << "Dimension: " << instance.dimension << std::endl;
-	std::cout << "Optimal dist: " << instance.optimalDist << std::endl << std::endl;
-
-	for (int i = 0; i < nRuns; i++)
-	{
-		//tspSolver->reseed(i + 1);
-
-		auto start = std::chrono::high_resolution_clock::now();
-		tspSolver->solve(instance.adjMat);
-		auto end = std::chrono::high_resolution_clock::now();
-
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-		long long msPassed = duration.count();
-		int dist = tspSolver->getCurrSolutionDist();
-		double gap = 100.0 * (double)(dist - instance.optimalDist) / (double)instance.optimalDist;
-
-		distTotal += dist;
-		msPassedTotal += msPassed;
-		gapTotal += gap;
-
-		std::cout << "Run " << (i + 1) << ":" << std::endl;
-		std::cout << "Dist: " << dist << std::endl;
-		std::cout << "Time: " << msPassed << " ms" << std::endl;
-		std::cout << "Gap from optimal: " << std::fixed << std::setprecision(2) << gap << "%" << std::endl;
-		std::cout << std::endl;
-	}
-
-	std::cout << std::endl << "Averages:" << std::endl;
-	std::cout << "Avg dist: " << (double)distTotal / nRuns << std::endl;
-	std::cout << "Avg time: " << (double)msPassedTotal / nRuns << " ms" << std::endl;
-	std::cout << "Avg gap from optimal: " << std::fixed << std::setprecision(2) << gapTotal / nRuns << "%" << std::endl;
+	
 
 	return 1;
 }

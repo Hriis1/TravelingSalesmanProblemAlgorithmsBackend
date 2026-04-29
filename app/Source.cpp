@@ -12,7 +12,8 @@ int main()
 	//testGeneticAlgoRand(100, 1000, 10, 500, 100, 0.90f, 0.05f, 100, false, true);
 
 	//Run MMAS
-	testMMASRand(100, 1000, 20, 500, 2, 3, 0.1, 100, false);
+	//testMMASRand(100, 1000, 20, 500, 2, 3, 0.1, 100, false);
+	testMMASInstance("a280.tsp", 500, 2, 3, 0.1, 100);
 
 	std::cin.get();
 	return 0;
