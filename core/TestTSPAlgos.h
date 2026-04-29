@@ -127,7 +127,7 @@ int testTSPAlso(int nCities, int planeSize, int nRuns, bool doBruteForce, TSPAlg
 	return 1;
 }
 
-int testMMAS(int nCities, int planeSize, int nRuns, int nIters, double alpha, double beta, double rho, int nnoimpr, bool doBruteForce)
+int testMMASRand(int nCities, int planeSize, int nRuns, int nIters, double alpha, double beta, double rho, int nnoimpr, bool doBruteForce)
 {
 	//Init solver
 	TSPMMAS tsp = TSPMMAS(nCities, nIters, alpha, beta, rho, nnoimpr);
@@ -136,7 +136,7 @@ int testMMAS(int nCities, int planeSize, int nRuns, int nIters, double alpha, do
 	return testTSPAlso(nCities, planeSize, nRuns, doBruteForce, &tsp, "MMAS");
 }
 
-int testGeneticAlgo(int nCities, int planeSize, int nRuns, int ng, int npop, float pc, float pm, int nnoimpr, bool doBruteForce, bool initWithNN)
+int testGeneticAlgoRand(int nCities, int planeSize, int nRuns, int ng, int npop, float pc, float pm, int nnoimpr, bool doBruteForce, bool initWithNN)
 {
 	//Init solver
 	TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
