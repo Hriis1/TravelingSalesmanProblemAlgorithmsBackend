@@ -137,6 +137,30 @@ namespace TSPUtils
         return adj;
     }
 
+    int calculateDist(const std::vector<std::vector<int>>& adjMat, std::vector<int>& path)
+    {
+        //Init dist
+        int dist = 0;
+
+        //Sz of path
+        int N = path.size();
+
+        if (N == 0)
+            return 0;
+
+        //Asert path size == size of adj matrix
+        assert(N == adjMat.size());
+
+        //Calc dist
+        for (size_t i = 0; i < path.size() - 1; i++)
+            dist += adjMat[path[i]][path[i + 1]];
+
+        // add return to start
+        dist += adjMat[path[N - 1]][path[0]];
+
+        return dist;
+    }
+
     int bruteForceOptimal(const std::vector<std::vector<int>>& adjMatrix, int startCity = 0)
     {
         const int n = (int)adjMatrix.size();
@@ -194,83 +218,29 @@ namespace TSPUtils
         return (int)best;
     }
 
-    int nearestNeighborDistance(const std::vector<std::vector<int>>& adjMatrix, int startCity = 0)
+    std::vector<int> nearestNeighborPath(const std::vector<std::vector<int>>& adjMat, int startCity = 0)
     {
-        const int n = adjMatrix.size();
+        const int n = adjMat.size();
 
         // Edge cases
         if (n == 0)
-            return 0;
-
-        if (n == 1)
-            return 0;
-
-        if (startCity < 0 || startCity >= n)
-            return -1;
-
-        for (const auto& row : adjMatrix)
-            if (row.size() != n)
-                return -1;
-
-        std::vector<char> visited(n, 0);
-        visited[startCity] = 1;
-
-        int currCity = startCity;
-        int totalDist = 0;
-
-        for (int step = 1; step < n; ++step)
-        {
-            int nextCity = -1;
-            int bestDist = INT_MAX;
-
-            for (int city = 0; city < n; ++city)
-            {
-                if (visited[city])
-                    continue;
-
-                const int d = adjMatrix[currCity][city];
-                if (d < bestDist)
-                {
-                    bestDist = d;
-                    nextCity = city;
-                }
-            }
-
-            if (nextCity < 0)
-                return -1;
-
-            visited[nextCity] = 1;
-            totalDist += bestDist;
-            currCity = nextCity;
-        }
-
-        totalDist += adjMatrix[currCity][startCity];
-        return totalDist;
-    }
-
-    std::vector<int> nearestNeighborPath(const std::vector<std::vector<int>>& adjMatrix, int startCity = 0)
-    {
-        const int n = adjMatrix.size();
-
-        // Edge cases
-        if (n == 0) 
             return {};
 
         if (n == 1)
         {
-            if (startCity != 0) 
+            if (startCity != 0)
                 return {}; // invalid start for 1-city matrix
 
             return { 0 }; //just start city
         }
 
         // Validate start city
-        if (startCity < 0 || startCity >= n) 
+        if (startCity < 0 || startCity >= n)
             return {};
 
         // Validate matrix is n x n
-        for (const auto& row : adjMatrix)
-            if (row.size() != n) 
+        for (const auto& row : adjMat)
+            if (row.size() != n)
                 return {};
 
         std::vector<char> visited(n, 0);
@@ -289,10 +259,10 @@ namespace TSPUtils
 
             for (int city = 0; city < n; ++city)
             {
-                if (visited[city]) 
+                if (visited[city])
                     continue;
 
-                const int d = adjMatrix[currCity][city];
+                const int d = adjMat[currCity][city];
                 if (d < bestDist)
                 {
                     bestDist = d;
@@ -300,7 +270,7 @@ namespace TSPUtils
                 }
             }
 
-            if (nextCity < 0) 
+            if (nextCity < 0)
                 return {}; // shouldn't happen
 
             visited[nextCity] = 1;
@@ -309,6 +279,13 @@ namespace TSPUtils
         }
 
         return path;
+    }
+
+    int nearestNeighborDistance(const std::vector<std::vector<int>>& adjMat, int startCity = 0)
+    {
+        auto path = nearestNeighborPath(adjMat, startCity);
+
+        return calculateDist(adjMat, path);
     }
 
 }
