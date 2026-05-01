@@ -151,6 +151,8 @@ int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, cons
 		long long distTotal = 0;
 		long long msPassedTotal = 0;
 		double gapTotal = 0.0;
+		int nearestNeighborDist = TSPUtils::nearestNeighborDistance(instance.adjMat, 0);
+		double gapNN = 100.0 * (double)(nearestNeighborDist - instance.optimalDist) / (double)instance.optimalDist;
 
 
 		std::cout << "Running TSP instance " << algoName << " for " << instance.name << " " << nRuns << " times..." << std::endl;
@@ -159,7 +161,7 @@ int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, cons
 
 		for (int i = 0; i < nRuns; i++)
 		{
-			//tspSolver->reseed(i + 1);
+
 
 			auto start = std::chrono::high_resolution_clock::now();
 			tspSolver->solve(instance.adjMat);
@@ -183,9 +185,11 @@ int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, cons
 
 		std::cout << std::endl << "Averages:" << std::endl;
 		std::cout << "Avg dist: " << (double)distTotal / nRuns << std::endl;
+		std::cout << "Nearest neighbor dist: " << nearestNeighborDist << std::endl;
 		std::cout << "Avg time: " << (double)msPassedTotal / nRuns << " ms" << std::endl;
 		std::cout << "Optimal dist: " << instance.optimalDist << std::endl << std::endl;
 		std::cout << "Avg gap from optimal: " << std::fixed << std::setprecision(2) << gapTotal / nRuns << "%" << std::endl;
+		std::cout << "Nearest neighbor gap from optimal: " << std::fixed << std::setprecision(2) << gapNN << "%" << std::endl;
 	}
 	catch (const std::exception& e)
 	{
