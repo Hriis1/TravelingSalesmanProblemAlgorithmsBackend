@@ -10,7 +10,7 @@ int main()
 {
 	//Run genetic algo
 	//testGeneticAlgoRand(100, 1000, 10, 500, 100, 0.90f, 0.05f, 100, false, true);
-	testGeneticInstance("pr264.tsp", 500, 100, 0.50f, 0.05f, 100, true);
+	testGeneticInstance("gil262.tsp", 500, 100, 0.50f, 0.05f, 100, true);
 
 	//Run MMAS
 	//testMMASRand(100, 1000, 20, 500, 2, 3, 0.1, 100, false);

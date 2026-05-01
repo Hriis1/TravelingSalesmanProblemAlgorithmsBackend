@@ -151,7 +151,7 @@ int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, cons
 		long long distTotal = 0;
 		long long msPassedTotal = 0;
 		double gapTotal = 0.0;
-		int nearestNeighborDist = TSPUtils::nearestNeighborDistance(instance.adjMat, 0);
+		int nearestNeighborDist = TSPUtils::nearestNeighborDistance(instance.adjMat, 0, false);
 		double gapNN = 100.0 * (double)(nearestNeighborDist - instance.optimalDist) / (double)instance.optimalDist;
 
 
