@@ -216,7 +216,7 @@ int testGeneticInstance(const std::string& instance, int ng, int npop, float pc,
 	TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
 
 	//Solve and display results
-	return testTSPAlgoInstance(instance, &tsp, "MMAS");
+	return testTSPAlgoInstance(instance, &tsp, "Genetic algorithm");
 }
 
 int testMMASRand(int nCities, int planeSize, int nRuns, int nIters, double alpha, double beta, double rho, int nnoimpr, bool doBruteForce)
