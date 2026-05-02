@@ -10,26 +10,23 @@
 
 struct LKHConfig
 {
-    int maxTrials = 0;
-    int maxCandidates = 0;
-    int maxDepth = 0;
-    int backtrackingLimit = 0;
-    int runs = 0;
-    int kickStrength = 0;
-
-    bool useAlphaCandidates = false;
-    bool useDontLookBits = false;
-    bool useBacktracking = false;
+    //Default values
+    int maxTrials = 50;
+    int maxCandidates = 15;
+    int maxDepth = 3;
+    int backtrackingLimit = 20;
+    int runs = 1;
+    int kickStrength = 4;
 };
 
 
-class TSPMMAS: public TSPAlgo
+class TSPLKH: public TSPAlgo
 {
 private:
 
 public:
 
-    TSPMMAS(LKHConfig& config, unsigned int seed = std::random_device{}())
+    TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}())
         :TSPAlgo(seed), _config(config)
     {}
 
@@ -39,5 +36,6 @@ public:
 
 private:
 
+private:
     LKHConfig _config;
 };
