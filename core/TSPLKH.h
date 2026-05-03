@@ -14,7 +14,7 @@ struct LKHConfig
 
     int maxTrials = 50;                 //How many attempts LKH makes
     int maxCandidates = 15;             //How many candidate edges each city considers
-    int maxDepth = 3;                   //Maximum depth of the variable k-opt search
+    int maxDepth = 5;                   //Maximum depth of the variable k-opt search
     int backtrackingLimit = 20;         //Limits how many failed alternatives are explored.
     int runs = 1;                       //How many independent full runs to do
     int kickStrength = 4;               //How strong the perturbation is when stuck
@@ -108,6 +108,13 @@ private:
         return true;
     }
 
+    //Increeses the degrees of both nodes and updates _validOneTree
+    void addOneTreeEdge(int u, int v)
+    {
+        if (++_nodes[u].degree >= 3 || ++_nodes[v].degree >= 3)
+            _validOneTree = false;
+    }
+
     //Builds one minimum 1-tree using the current transformed costs.
     //
     //A 1-tree is:
@@ -147,6 +154,9 @@ private:
         //Start Prim from node 1. It enters the MST with no incoming edge.
         bestCost[1] = 0;
 
+        //Assume tree is valid at the begining
+        _validOneTree = true;
+
         for (int step = 1; step < n; step++)
         {
             int v = -1;
@@ -172,8 +182,7 @@ private:
             {
                 const int parent = bestParent[v];
                 _nodes[v].parent = parent;
-                _nodes[v].degree++;
-                _nodes[parent].degree++;
+                addOneTreeEdge(v, parent);
                 totalCost += vCost;
             }
 
@@ -222,9 +231,8 @@ private:
         assert(second != -1);
         assert(first != second);
 
-        _nodes[root].degree += 2;
-        _nodes[first].degree++;
-        _nodes[second].degree++;
+        addOneTreeEdge(root, first);
+        addOneTreeEdge(root, second);
         totalCost += firstCost + secondCost;
 
         //Check if tree is built correctly during debug
@@ -237,6 +245,8 @@ private:
     LKHConfig _config;              //config data for solver
 
     std::vector<LKHNode> _nodes;    //_nodes - each node is information about a city
+
+    bool _validOneTree = false;     // 1-tree is a valid route
 
     long long _piSum = 0;           //Sum of all the penalties of the nodes
 };
