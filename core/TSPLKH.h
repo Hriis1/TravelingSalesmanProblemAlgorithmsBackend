@@ -21,7 +21,7 @@ struct LKHConfig
     int kickStrength = 4;               //How strong the perturbation is when stuck
 
 
-    long long precision = 100;                //precision for calculating transformed costs
+    long long precision = 100;          //precision for calculating transformed costs
 };
 
 
@@ -32,10 +32,10 @@ private:
     //A node is information for each city
     struct LKHNode
     {
-        int id = -1;
-        long long pi = 0;
-        int degree = 0;
-        int parent = -1;
+        int id = -1;                    //Which city it is
+        long long pi = 0;               //The penalty of the city              
+        int degree = 0;                 //How many cities is it connected to in the 1-tree
+        int parent = -1;                //Which city it connected to while building the 1-tree
     };
 
 public:
@@ -49,7 +49,7 @@ public:
         //num cities
         int n = adjMat.size();
 
-        //init the _nodes
+        //init the _nodes and reset _piSum
         _nodes.resize(n);
         for (int i = 0; i < n; i++)
         {
@@ -58,6 +58,7 @@ public:
             _nodes[i].degree = 0;
             _nodes[i].parent = -1;
         }
+        _piSum = 0;
 
         //Build the initial 1-tree and get its cost
         long long oneTreeCost = buildMinimumOneTree(adjMat);
@@ -69,6 +70,11 @@ private:
     long long getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const
     {
         return (long long)(_config.precision * (long long)adjMat[i][j] + _nodes[i].pi + _nodes[j].pi);
+    }
+
+    long long calculateOneTreeLowerBound(long long oneTreeCost) const
+    {
+        return oneTreeCost - (2 * _piSum);
     }
 
     //Builds one minimum 1-tree using the current transformed costs.
@@ -197,5 +203,9 @@ private:
     LKHConfig _config; //config data for solver
 
     std::vector<LKHNode> _nodes; //_nodes - each node is information about a city
+
+    long long _piSum = 0; //Sum of all the penalties of the nodes
+
+
 
 };
