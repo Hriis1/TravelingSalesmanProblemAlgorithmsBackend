@@ -48,8 +48,13 @@ public:
         //num cities
         int n = adjMat.size();
 
+        //Reset values
+        _bestPisSum = 0;
+        _bestLowerBound = LLONG_MIN;
+
         //init the _nodes and reset _piSum
         _nodes.resize(n);
+        _bestPis.assign(n, 0);
         for (int i = 0; i < n; i++)
         {
             _nodes[i].id = i;
@@ -80,6 +85,27 @@ private:
     {
         node.pi += delta;
         _piSum += delta;
+    }
+
+    void saveBestPenaltyState(long long lowerBound)
+    {
+        assert(_bestPis.size() == _nodes.size());
+
+        _bestLowerBound = lowerBound;
+        _bestPisSum = _piSum;
+
+        for (size_t i = 0; i < _nodes.size(); i++)
+            _bestPis[i] = _nodes[i].pi;
+    }
+
+    void restoreBestPenaltyState()
+    {
+        assert(_bestPis.size() == _nodes.size());
+
+        _piSum = _bestPisSum;
+
+        for (size_t i = 0; i < _nodes.size(); i++)
+            _nodes[i].pi = _bestPis[i];
     }
 
     bool isOneTreeValid(int nCities) const
@@ -246,7 +272,13 @@ private:
 
     std::vector<LKHNode> _nodes;    //_nodes - each node is information about a city
 
-    bool _validOneTree = false;     // 1-tree is a valid route
+    std::vector<long long> _bestPis; //Best penalties so far for each city
 
     long long _piSum = 0;           //Sum of all the penalties of the nodes
+
+    long long _bestPisSum = 0;       //The best sum of all penalties so far
+
+    long long _bestLowerBound = LLONG_MIN; //Best lower bound so far
+
+    bool _validOneTree = false;     // 1-tree is a valid route
 };
