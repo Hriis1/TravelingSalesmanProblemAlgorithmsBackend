@@ -2,6 +2,7 @@
 #include <climits>
 #include <array>
 #include <cassert>
+#include <queue>
 
 #include "TSPAlgo.h"
 #include "TSPSolution.h"
@@ -28,6 +29,15 @@ class TSPLKH: public TSPAlgo
 {
 private:
 
+    //A node is information for each city
+    struct LKHNode
+    {
+        int id = -1;
+        long long pi = 0;
+        int degree = 0;
+        int parent = -1;
+    };
+
 public:
 
     TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}())
@@ -39,8 +49,18 @@ public:
         //num cities
         int n = adjMat.size();
 
-        //asign penalties to 0 at the start
-        pi.assign(n, 0);
+        //init the _nodes
+        _nodes.resize(n);
+        for (int i = 0; i < n; i++)
+        {
+            _nodes[i].id = i;
+            _nodes[i].pi = 0;
+            _nodes[i].degree = 0;
+            _nodes[i].parent = -1;
+        }
+
+        //Build the initial 1-tree and get its cost
+        long long oneTreeCost = buildMinimumOneTree(adjMat);
     }
 
 private:
@@ -48,12 +68,134 @@ private:
     //Returns the transformed cost between 2 cities
     long long getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const
     {
-        return (long long)(_config.precision * (long long)adjMat[i][j] + pi[i] + pi[j]);
+        return (long long)(_config.precision * (long long)adjMat[i][j] + _nodes[i].pi + _nodes[j].pi);
+    }
+
+    //Builds one minimum 1-tree using the current transformed costs.
+    //
+    //A 1-tree is:
+    //  1. a minimum spanning tree over all non-root _nodes
+    //  2. plus the two cheapest edges from the root into that tree
+    //
+    //The 1-tree structure is stored in _nodes:
+    //  - _nodes[i].parent stores the MST parent for non-root _nodes
+    //  - _nodes[i].degree stores the degree in the full 1-tree
+    //
+    //Only the transformed total cost is returned because LKH keeps the
+    //tree state on the _nodes themselves.
+    long long buildMinimumOneTree(const std::vector<std::vector<int>>& adjMat)
+    {
+        const int n = (int)adjMat.size();
+        assert(n >= 3);
+        assert((int)_nodes.size() == n);
+
+        //LKH builds the 1-tree by excluding one special root from the MST.
+        const int root = 0;
+
+        //Clear the previous 1-tree state. Do not clear pi here
+        for (int i = 0; i < n; i++)
+        {
+            _nodes[i].degree = 0;
+            _nodes[i].parent = -1;
+        }
+
+        long long totalCost = 0;
+
+        //Prim's algorithm state for the MST over _nodes 1..n-1.
+        //The root is excluded from this MST and gets attached afterward.
+        std::vector<char> inMST(n, 0);
+        std::vector<long long> bestCost(n, LLONG_MAX);
+        std::vector<int> bestParent(n, -1);
+
+        //Start Prim from node 1. It enters the MST with no incoming edge.
+        bestCost[1] = 0;
+
+        for (int step = 1; step < n; step++)
+        {
+            int v = -1;
+            long long vCost = LLONG_MAX;
+
+            //Pick the non-root node outside the MST with the cheapest
+            //known connection to the current MST.
+            for (int i = 1; i < n; i++)
+            {
+                if (!inMST[i] && bestCost[i] < vCost)
+                {
+                    v = i;
+                    vCost = bestCost[i];
+                }
+            }
+
+            assert(v != -1);
+            inMST[v] = 1;
+
+            //If v has a parent, add that edge to the MST part of the 1-tree.
+            //The first inserted node has no parent and contributes no edge.
+            if (bestParent[v] != -1)
+            {
+                const int parent = bestParent[v];
+                _nodes[v].parent = parent;
+                _nodes[v].degree++;
+                _nodes[parent].degree++;
+                totalCost += vCost;
+            }
+
+            //Update the cheapest known connection for every non-root node
+            //that is still outside the MST.
+            for (int w = 1; w < n; w++)
+            {
+                if (inMST[w] || w == v)
+                    continue;
+
+                const long long cost = getTransformedCost(v, w, adjMat);
+                if (cost < bestCost[w])
+                {
+                    bestCost[w] = cost;
+                    bestParent[w] = v;
+                }
+            }
+        }
+
+        //Complete the 1-tree by adding the two cheapest transformed-cost
+        //edges from the excluded root to two distinct non-root _nodes.
+        int first = -1;
+        int second = -1;
+        long long firstCost = LLONG_MAX;
+        long long secondCost = LLONG_MAX;
+
+        for (int i = 1; i < n; i++)
+        {
+            const long long cost = getTransformedCost(root, i, adjMat);
+
+            if (cost < firstCost)
+            {
+                second = first;
+                secondCost = firstCost;
+                first = i;
+                firstCost = cost;
+            }
+            else if (cost < secondCost)
+            {
+                second = i;
+                secondCost = cost;
+            }
+        }
+
+        assert(first != -1);
+        assert(second != -1);
+        assert(first != second);
+
+        _nodes[root].degree += 2;
+        _nodes[first].degree++;
+        _nodes[second].degree++;
+        totalCost += firstCost + secondCost;
+
+        return totalCost;
     }
 
 private:
     LKHConfig _config; //config data for solver
 
-    std::vector<long long> pi; //pnalties
+    std::vector<LKHNode> _nodes; //_nodes - each node is information about a city
 
 };
