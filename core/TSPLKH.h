@@ -77,6 +77,12 @@ private:
         return oneTreeCost - (2 * _piSum);
     }
 
+    void updatePenalty(LKHNode& node, long long delta)
+    {
+        node.pi += delta;
+        _piSum += delta;
+    }
+
     //Builds one minimum 1-tree using the current transformed costs.
     //
     //A 1-tree is:
