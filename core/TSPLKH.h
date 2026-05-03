@@ -64,8 +64,8 @@ public:
         }
         _piSum = 0;
 
-        //Build the initial 1-tree and get its cost
-        long long oneTreeCost = buildMinimumOneTree(adjMat);
+        //Ascent and get the lower bound
+        long long lowerBound = ascent(adjMat);
     }
 
 private:
@@ -265,6 +265,56 @@ private:
         assert(isOneTreeValid(n));
 
         return totalCost;
+    }
+
+    long long ascent(const std::vector<std::vector<int>>& adjMat)
+    {
+        //Build the initial 1-tree and get its cost
+        long long oneTreeCost = buildMinimumOneTree(adjMat);
+        long long lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+        saveBestPenaltyState(lowerBound);
+
+        if (_validOneTree)
+            return lowerBound;
+
+        long long stepSize = 100;
+        int period = 50;
+        int nnCounter = 0;
+        int maxTries = 10;
+
+        for(size_t nTries = 0; nTries < maxTries; nTries ++)
+        {
+            for (size_t iter = 0; iter < period; iter++)
+            {
+                //Update penalties
+                for (size_t n = 0; n < _nodes.size(); n++)
+                    updatePenalty(_nodes[n], stepSize * ((long long)_nodes[n].degree - 2));
+
+                //build new 1-tree with updated penalties
+                oneTreeCost = buildMinimumOneTree(adjMat);
+                lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+
+                nnCounter++;
+
+                //if a better lower bound was found
+                if (lowerBound > _bestLowerBound)
+                {
+                    saveBestPenaltyState(lowerBound);
+                    nnCounter = 0;
+                }
+
+                if (_validOneTree)
+                    return lowerBound;
+            }
+
+            //TODO: adjust stepSize/period
+        }
+
+        restoreBestPenaltyState();
+        oneTreeCost = buildMinimumOneTree(adjMat);
+        lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+
+        return lowerBound;
     }
 
 private:
