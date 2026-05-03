@@ -2,7 +2,6 @@
 #include <climits>
 #include <array>
 #include <cassert>
-#include <queue>
 
 #include "TSPAlgo.h"
 #include "TSPSolution.h"
@@ -81,6 +80,32 @@ private:
     {
         node.pi += delta;
         _piSum += delta;
+    }
+
+    bool isOneTreeValid(int nCities) const
+    {
+        //Validate that the degree of root is 2
+        if (_nodes[0].degree != 2)
+            return false;
+
+        //Validate that cities 0 and 1 have no parents(-1)
+        if (_nodes[0].parent != -1 || _nodes[1].parent != -1)
+            return false;
+
+        //Get the sum of all degrees and non root nodes - nodes with parent != -1
+        int nDegrees = 0;
+        int nNonRootNodes = 0;
+        for (size_t i = 0; i < nCities; i++)
+        {
+            nDegrees += _nodes[i].degree;
+            nNonRootNodes += _nodes[i].parent != -1 ? 1 : 0;
+        }
+
+        //Validate the nDegrees and nNonRootNodes
+        if (nDegrees != 2 * nCities || nNonRootNodes != (nCities - 2))
+            return false;
+
+        return true;
     }
 
     //Builds one minimum 1-tree using the current transformed costs.
@@ -202,16 +227,16 @@ private:
         _nodes[second].degree++;
         totalCost += firstCost + secondCost;
 
+        //Check if tree is built correctly during debug
+        assert(isOneTreeValid(n));
+
         return totalCost;
     }
 
 private:
-    LKHConfig _config; //config data for solver
+    LKHConfig _config;              //config data for solver
 
-    std::vector<LKHNode> _nodes; //_nodes - each node is information about a city
+    std::vector<LKHNode> _nodes;    //_nodes - each node is information about a city
 
-    long long _piSum = 0; //Sum of all the penalties of the nodes
-
-
-
+    long long _piSum = 0;           //Sum of all the penalties of the nodes
 };
