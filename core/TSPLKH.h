@@ -34,6 +34,7 @@ private:
         int id = -1;                    //Which city it is
         long long pi = 0;               //The penalty of the city              
         int degree = 0;                 //How many cities is it connected to in the 1-tree
+        int lastDegree = 0;             //The degree in the prev iteration
         int parent = -1;                //Which city it connected to while building the 1-tree
     };
 
@@ -59,7 +60,8 @@ public:
         {
             _nodes[i].id = i;
             _nodes[i].pi = 0;
-            _nodes[i].degree = 0;
+            _nodes[i].degree = 2;
+            _nodes[i].lastDegree = 2;
             _nodes[i].parent = -1;
         }
         _piSum = 0;
@@ -162,9 +164,10 @@ private:
         //LKH builds the 1-tree by excluding one special root from the MST.
         const int root = 0;
 
-        //Clear the previous 1-tree state. Do not clear pi here
+        //Clear the previous 1-tree state and save lastdegree. Do not clear pi here
         for (int i = 0; i < n; i++)
         {
+            _nodes[i].lastDegree = _nodes[i].degree;
             _nodes[i].degree = 0;
             _nodes[i].parent = -1;
         }
@@ -282,13 +285,18 @@ private:
         int nnCounter = 0;
         int maxTries = 10;
 
-        for(size_t nTries = 0; nTries < maxTries; nTries ++)
+        for(size_t nTries = 0; nTries < maxTries; nTries++)
         {
             for (size_t iter = 0; iter < period; iter++)
             {
                 //Update penalties
                 for (size_t n = 0; n < _nodes.size(); n++)
-                    updatePenalty(_nodes[n], stepSize * ((long long)_nodes[n].degree - 2));
+                {
+                    long long v = (long long)_nodes[n].degree - 2;
+                    long long lastV = (long long)_nodes[n].lastDegree - 2;
+                    long long delta = stepSize * ((7 * v) + (3 * lastV)) / 10;
+                    updatePenalty(_nodes[n], delta);
+                }
 
                 //build new 1-tree with updated penalties
                 oneTreeCost = buildMinimumOneTree(adjMat);
