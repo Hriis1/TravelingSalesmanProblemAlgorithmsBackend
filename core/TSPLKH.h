@@ -298,9 +298,15 @@ private:
                 for (size_t n = 0; n < _nodes.size(); n++)
                 {
                     long long v = (long long)_nodes[n].degree - 2;
-                    long long lastV = (long long)_nodes[n].lastDegree - 2;
-                    long long delta = stepSize * ((7 * v) + (3 * lastV)) / 10;
-                    updatePenalty(_nodes[n], delta);
+
+                    //Only update penalty if  degree violation != 0
+                    if (v != 0)
+                    {
+                        long long lastV = (long long)_nodes[n].lastDegree - 2;
+                        long long delta = stepSize * ((7 * v) + (3 * lastV)) / 10;
+
+                        updatePenalty(_nodes[n], delta);
+                    }
                 }
 
                 //build new 1-tree with updated penalties
