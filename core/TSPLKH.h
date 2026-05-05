@@ -275,6 +275,11 @@ private:
         //Build the initial 1-tree and get its cost
         long long oneTreeCost = buildMinimumOneTree(adjMat);
         long long lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+
+        //Set last degree = degree after 1st 1-tree
+        for (auto& node : _nodes)
+            node.lastDegree = node.degree;
+
         saveBestPenaltyState(lowerBound);
 
         if (_validOneTree)
