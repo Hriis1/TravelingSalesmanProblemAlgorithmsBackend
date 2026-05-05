@@ -86,9 +86,21 @@ private:
 
     void updatePenalty(LKHNode& node, long long delta)
     {
+        constexpr long long PI_MAX = INT_MAX / 10;
+        constexpr long long PI_MIN = INT_MIN / 10;
+
+        const long long oldPi = node.pi;
+
         node.pi += delta;
-        _piSum += delta;
+
+        if (node.pi > PI_MAX)
+            node.pi = PI_MAX;
+        else if (node.pi < PI_MIN)
+            node.pi = PI_MIN;
+
+        _piSum += node.pi - oldPi;
     }
+
 
     void saveBestPenaltyState(long long lowerBound)
     {
