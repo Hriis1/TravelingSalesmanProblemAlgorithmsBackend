@@ -144,6 +144,73 @@ private:
         return true;
     }
 
+    std::vector<int> buildTourFromOneTree() const
+    {
+        const int n = (int)_nodes.size();
+        assert(n >= 3);
+        assert(_norm == 0);
+        assert(_oneTreeExtraU != -1);
+        assert(_oneTreeExtraV != -1);
+
+        //The current 1-tree is a tour when every node has degree 2.
+        //Rebuild its two-neighbor representation from the MST parent edges
+        //plus the one stored non-MST extra edge.
+        std::vector<std::array<int, 2>> neighbors(n, { -1, -1 });
+        std::vector<int> neighborCount(n, 0);
+
+        auto addNeighbor = [&](int u, int v)
+        {
+            assert(u >= 0 && u < n);
+            assert(v >= 0 && v < n);
+            assert(neighborCount[u] < 2);
+            neighbors[u][neighborCount[u]++] = v;
+        };
+
+        auto addUndirectedEdge = [&](int u, int v)
+        {
+            addNeighbor(u, v);
+            addNeighbor(v, u);
+        };
+
+        for (int i = 0; i < n; i++)
+        {
+            if (_nodes[i].parent != -1)
+                addUndirectedEdge(i, _nodes[i].parent);
+        }
+
+        addUndirectedEdge(_oneTreeExtraU, _oneTreeExtraV);
+
+        for (int i = 0; i < n; i++)
+            assert(neighborCount[i] == 2);
+
+        std::vector<int> tour;
+        tour.reserve(n);
+
+        std::vector<char> visited(n, 0);
+        int prev = -1;
+        int curr = 0;
+
+        for (int step = 0; step < n; step++)
+        {
+            assert(!visited[curr]);
+            visited[curr] = 1;
+            tour.push_back(curr);
+
+            const int a = neighbors[curr][0];
+            const int b = neighbors[curr][1];
+            const int next = (a != prev) ? a : b;
+
+            prev = curr;
+            curr = next;
+        }
+
+        for (int i = 0; i < n; i++)
+            assert(visited[i]);
+        assert(curr == tour[0]);
+
+        return tour;
+    }
+
     //Increases the degrees of both nodes for a selected 1-tree edge.
     void addOneTreeEdge(int u, int v)
     {
@@ -170,6 +237,8 @@ private:
         assert((int)_nodes.size() == n);
 
         //Clear the previous 1-tree state and save lastdegree. Do not clear pi here
+        _oneTreeExtraU = -1;
+        _oneTreeExtraV = -1;
         for (int i = 0; i < n; i++)
         {
             _nodes[i].lastDegree = _nodes[i].degree;
@@ -290,6 +359,9 @@ private:
         assert(selectedLeaf != -1);
         assert(selectedNext != -1);
 
+        _oneTreeExtraU = selectedLeaf;
+        _oneTreeExtraV = selectedNext;
+
         addOneTreeEdge(selectedLeaf, selectedNext);
         totalCost += selectedNextCost;
 
@@ -320,12 +392,18 @@ private:
         saveBestPenaltyState(lowerBound);
 
         if (_norm == 0)
+        {
+            _currSolution.path = buildTourFromOneTree();
+            _currSolution.calculateDist(adjMat);
             return lowerBound;
+        }
 
         long long stepSize = 100;
         int period = 50;
         int nnCounter = 0;
         int maxTries = 10;
+
+        bool stopAscent = false;
 
         for(size_t nTries = 0; nTries < maxTries; nTries++)
         {
@@ -361,8 +439,14 @@ private:
                 }
 
                 if (_norm == 0)
-                    return lowerBound;
+                {
+                    stopAscent = true;
+                    break;
+                }
             }
+
+            if (stopAscent)
+                break;
 
             //TODO: adjust stepSize/period
         }
@@ -370,6 +454,12 @@ private:
         restoreBestPenaltyState();
         oneTreeCost = buildMinimumOneTree(adjMat);
         lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+
+        if (_norm == 0)
+        {
+            _currSolution.path = buildTourFromOneTree();
+            _currSolution.calculateDist(adjMat);
+        }
 
         return lowerBound;
     }
@@ -389,4 +479,7 @@ private:
 
     long long _norm = 0;                //how far the current minimum 1-tree is from being a valid tour                
     long long _bestNorm = LLONG_MAX;    //best norm so far
+
+    int _oneTreeExtraU = -1;            //first endpoint of the non-MST 1-tree edge
+    int _oneTreeExtraV = -1;            //second endpoint of the non-MST 1-tree edge
 };
