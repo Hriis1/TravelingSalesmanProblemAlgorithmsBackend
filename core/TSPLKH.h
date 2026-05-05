@@ -52,6 +52,7 @@ public:
         //Reset values
         _bestPisSum = 0;
         _bestLowerBound = LLONG_MIN;
+        _bestNorm = LLONG_MAX;
 
         //init the _nodes and reset _piSum
         _nodes.resize(n);
@@ -95,6 +96,7 @@ private:
 
         _bestLowerBound = lowerBound;
         _bestPisSum = _piSum;
+        _bestNorm = _norm;
 
         for (size_t i = 0; i < _nodes.size(); i++)
             _bestPis[i] = _nodes[i].pi;
@@ -139,8 +141,8 @@ private:
     //Increeses the degrees of both nodes and updates _validOneTree
     void addOneTreeEdge(int u, int v)
     {
-        if (++_nodes[u].degree >= 3 || ++_nodes[v].degree >= 3)
-            _validOneTree = false;
+        ++_nodes[u].degree >= 3;
+        ++_nodes[v].degree >= 3;
     }
 
     //Builds one minimum 1-tree using the current transformed costs.
@@ -182,9 +184,6 @@ private:
 
         //Start Prim from node 1. It enters the MST with no incoming edge.
         bestCost[1] = 0;
-
-        //Assume tree is valid at the begining
-        _validOneTree = true;
 
         for (int step = 1; step < n; step++)
         {
@@ -264,6 +263,14 @@ private:
         addOneTreeEdge(root, second);
         totalCost += firstCost + secondCost;
 
+        //Compute norm
+        _norm = 0;
+        for (const auto& node : _nodes)
+        {
+            long long v = (long long)node.degree - 2;
+            _norm += v * v;
+        }
+
         //Check if tree is built correctly during debug
         assert(isOneTreeValid(n));
 
@@ -282,7 +289,7 @@ private:
 
         saveBestPenaltyState(lowerBound);
 
-        if (_validOneTree)
+        if (_norm == 0)
             return lowerBound;
 
         long long stepSize = 100;
@@ -316,13 +323,14 @@ private:
                 nnCounter++;
 
                 //if a better lower bound was found
-                if (lowerBound > _bestLowerBound)
+                if (lowerBound > _bestLowerBound ||
+                    (lowerBound == _bestLowerBound && _norm < _bestNorm))
                 {
                     saveBestPenaltyState(lowerBound);
                     nnCounter = 0;
                 }
 
-                if (_validOneTree)
+                if (_norm == 0)
                     return lowerBound;
             }
 
@@ -337,17 +345,18 @@ private:
     }
 
 private:
-    LKHConfig _config;              //config data for solver
+    LKHConfig _config;                  //config data for solver
 
-    std::vector<LKHNode> _nodes;    //_nodes - each node is information about a city
+    std::vector<LKHNode> _nodes;        //_nodes - each node is information about a city
 
-    std::vector<long long> _bestPis; //Best penalties so far for each city
+    std::vector<long long> _bestPis;    //Best penalties so far for each city
 
-    long long _piSum = 0;           //Sum of all the penalties of the nodes
+    long long _piSum = 0;               //Sum of all the penalties of the nodes
 
-    long long _bestPisSum = 0;       //The best sum of all penalties so far
+    long long _bestPisSum = 0;          //The best sum of all penalties so far
 
     long long _bestLowerBound = LLONG_MIN; //Best lower bound so far
 
-    bool _validOneTree = false;     // 1-tree is a valid route
+    long long _norm = 0;                //how far the current minimum 1-tree is from being a valid tour                
+    long long _bestNorm = LLONG_MAX;    //best norm so far
 };
