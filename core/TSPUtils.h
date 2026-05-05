@@ -8,6 +8,7 @@
 
 namespace TSPUtils
 {
+    constexpr double PI = 3.14159265358979323846;
 
     enum class TspDatasetType {
         RandomUniform,
@@ -68,7 +69,7 @@ namespace TSPUtils
 
             for (unsigned int i = 0; i < numCities; i++)
             {
-                const double angle = (2.0 * M_PI * (double)i) / (double)numCities;
+                const double angle = (2.0 * PI * (double)i) / (double)numCities;
                 double x = cx + R * std::cos(angle) + noise(rng);
                 double y = cy + R * std::sin(angle) + noise(rng);
                 x = std::max(0.0, std::min(x, (double)planeSize)); //clamp

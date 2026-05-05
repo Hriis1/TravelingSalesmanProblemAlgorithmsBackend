@@ -114,45 +114,39 @@ private:
 
     bool isOneTreeValid(int nCities) const
     {
-        //Validate that the degree of root is 2
-        if (_nodes[0].degree != 2)
-            return false;
-
-        //Validate that cities 0 and 1 have no parents(-1)
-        if (_nodes[0].parent != -1 || _nodes[1].parent != -1)
-            return false;
-
-        //Get the sum of all degrees and non root nodes - nodes with parent != -1
+        //A LKH-style 1-tree is an MST over all nodes plus one extra edge.
+        //The MST has exactly one root with parent == -1.
         int nDegrees = 0;
-        int nNonRootNodes = 0;
-        for (size_t i = 0; i < nCities; i++)
+        int nMstRoots = 0;
+        for (int i = 0; i < nCities; i++)
         {
             nDegrees += _nodes[i].degree;
-            nNonRootNodes += _nodes[i].parent != -1 ? 1 : 0;
+            nMstRoots += _nodes[i].parent == -1 ? 1 : 0;
         }
 
-        //Validate the nDegrees and nNonRootNodes
-        if (nDegrees != 2 * nCities || nNonRootNodes != (nCities - 2))
+        //The full 1-tree has n edges, therefore total degree is 2n.
+        //The MST part has n - 1 parent links, therefore one MST root.
+        if (nDegrees != 2 * nCities || nMstRoots != 1)
             return false;
 
         return true;
     }
 
-    //Increeses the degrees of both nodes and updates _validOneTree
+    //Increases the degrees of both nodes for a selected 1-tree edge.
     void addOneTreeEdge(int u, int v)
     {
-        ++_nodes[u].degree >= 3;
-        ++_nodes[v].degree >= 3;
+        _nodes[u].degree++;
+        _nodes[v].degree++;
     }
 
     //Builds one minimum 1-tree using the current transformed costs.
     //
-    //A 1-tree is:
-    //  1. a minimum spanning tree over all non-root _nodes
-    //  2. plus the two cheapest edges from the root into that tree
+    //LKH builds a 1-tree as:
+    //  1. a minimum spanning tree over all nodes
+    //  2. plus one extra edge from a selected leaf
     //
     //The 1-tree structure is stored in _nodes:
-    //  - _nodes[i].parent stores the MST parent for non-root _nodes
+    //  - _nodes[i].parent stores the MST parent
     //  - _nodes[i].degree stores the degree in the full 1-tree
     //
     //Only the transformed total cost is returned because LKH keeps the
@@ -162,9 +156,6 @@ private:
         const int n = (int)adjMat.size();
         assert(n >= 3);
         assert((int)_nodes.size() == n);
-
-        //LKH builds the 1-tree by excluding one special root from the MST.
-        const int root = 0;
 
         //Clear the previous 1-tree state and save lastdegree. Do not clear pi here
         for (int i = 0; i < n; i++)
@@ -176,23 +167,22 @@ private:
 
         long long totalCost = 0;
 
-        //Prim's algorithm state for the MST over _nodes 1..n-1.
-        //The root is excluded from this MST and gets attached afterward.
+        //Prim's algorithm state for the MST over all nodes.
         std::vector<char> inMST(n, 0);
         std::vector<long long> bestCost(n, LLONG_MAX);
         std::vector<int> bestParent(n, -1);
 
-        //Start Prim from node 1. It enters the MST with no incoming edge.
-        bestCost[1] = 0;
+        //Start Prim from node 0. It becomes the MST root and has no parent.
+        bestCost[0] = 0;
 
-        for (int step = 1; step < n; step++)
+        for (int step = 0; step < n; step++)
         {
             int v = -1;
             long long vCost = LLONG_MAX;
 
-            //Pick the non-root node outside the MST with the cheapest
-            //known connection to the current MST.
-            for (int i = 1; i < n; i++)
+            //Pick the node outside the MST with the cheapest known
+            //connection to the current MST.
+            for (int i = 0; i < n; i++)
             {
                 if (!inMST[i] && bestCost[i] < vCost)
                 {
@@ -205,7 +195,7 @@ private:
             inMST[v] = 1;
 
             //If v has a parent, add that edge to the MST part of the 1-tree.
-            //The first inserted node has no parent and contributes no edge.
+            //The first inserted node is the MST root and contributes no edge.
             if (bestParent[v] != -1)
             {
                 const int parent = bestParent[v];
@@ -214,9 +204,9 @@ private:
                 totalCost += vCost;
             }
 
-            //Update the cheapest known connection for every non-root node
-            //that is still outside the MST.
-            for (int w = 1; w < n; w++)
+            //Update the cheapest known connection for every node that is
+            //still outside the MST.
+            for (int w = 0; w < n; w++)
             {
                 if (inMST[w] || w == v)
                     continue;
@@ -230,38 +220,66 @@ private:
             }
         }
 
-        //Complete the 1-tree by adding the two cheapest transformed-cost
-        //edges from the excluded root to two distinct non-root _nodes.
-        int first = -1;
-        int second = -1;
-        long long firstCost = LLONG_MAX;
-        long long secondCost = LLONG_MAX;
+        //Complete the 1-tree by adding one extra edge to a leaf.
+        //For every MST leaf, find its cheapest non-MST extra edge.
+        //LKH chooses the leaf whose such extra edge is largest.
+        int selectedLeaf = -1;
+        int selectedNext = -1;
+        long long selectedNextCost = LLONG_MIN;
 
-        for (int i = 1; i < n; i++)
+        for (int leaf = 0; leaf < n; leaf++)
         {
-            const long long cost = getTransformedCost(root, i, adjMat);
+            if (_nodes[leaf].degree != 1)
+                continue;
 
-            if (cost < firstCost)
+            //A leaf has exactly one MST neighbor. For non-root leaves it is
+            //the parent. If the MST root is a leaf, its only MST neighbor is
+            //its single child, so find that child and exclude it as well.
+            int mstNeighbor = _nodes[leaf].parent;
+            if (mstNeighbor == -1)
             {
-                second = first;
-                secondCost = firstCost;
-                first = i;
-                firstCost = cost;
+                for (int j = 0; j < n; j++)
+                {
+                    if (_nodes[j].parent == leaf)
+                    {
+                        mstNeighbor = j;
+                        break;
+                    }
+                }
             }
-            else if (cost < secondCost)
+            assert(mstNeighbor != -1);
+
+            int bestNext = -1;
+            long long bestNextCost = LLONG_MAX;
+
+            for (int j = 0; j < n; j++)
             {
-                second = i;
-                secondCost = cost;
+                if (j == leaf || j == mstNeighbor)
+                    continue;
+
+                const long long cost = getTransformedCost(leaf, j, adjMat);
+                if (cost < bestNextCost)
+                {
+                    bestNext = j;
+                    bestNextCost = cost;
+                }
+            }
+
+            assert(bestNext != -1);
+
+            if (bestNextCost > selectedNextCost)
+            {
+                selectedLeaf = leaf;
+                selectedNext = bestNext;
+                selectedNextCost = bestNextCost;
             }
         }
 
-        assert(first != -1);
-        assert(second != -1);
-        assert(first != second);
+        assert(selectedLeaf != -1);
+        assert(selectedNext != -1);
 
-        addOneTreeEdge(root, first);
-        addOneTreeEdge(root, second);
-        totalCost += firstCost + secondCost;
+        addOneTreeEdge(selectedLeaf, selectedNext);
+        totalCost += selectedNextCost;
 
         //Compute norm
         _norm = 0;
