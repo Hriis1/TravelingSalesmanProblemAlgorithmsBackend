@@ -19,6 +19,8 @@ struct LKHConfig
     int runs = 1;                       //How many independent full runs to do
     int kickStrength = 4;               //How strong the perturbation is when stuck
 
+    int initialPeriod = -1;             // LKH default: max(n / 2, 100)
+    int initialStepSize = 1;            // LKH default: 1
 
     long long precision = 100;          //precision for calculating transformed costs
 };
@@ -398,16 +400,20 @@ private:
             return lowerBound;
         }
 
-        long long stepSize = 100;
-        int period = 50;
-        int nnCounter = 0;
-        int maxTries = 10;
+        //Init vars for ascent
+        const int n = (int)_nodes.size();
+
+        const int initialPeriod =
+            _config.initialPeriod > 0 ? _config.initialPeriod : std::max(n / 2, 100);
+
+        long long stepSize = _config.initialStepSize * _config.precision;
+        bool initialPhase = true;
 
         bool stopAscent = false;
 
-        for(size_t nTries = 0; nTries < maxTries; nTries++)
+        for (int period = initialPeriod; period > 0 && stepSize > 0 && _norm != 0; period /= 2, stepSize /= 2)
         {
-            for (size_t iter = 0; iter < period; iter++)
+            for (int p = 1; stepSize > 0 && p <= period && _norm != 0; p++)
             {
                 //Update penalties
                 for (size_t n = 0; n < _nodes.size(); n++)
@@ -428,14 +434,28 @@ private:
                 oneTreeCost = buildMinimumOneTree(adjMat);
                 lowerBound = calculateOneTreeLowerBound(oneTreeCost);
 
-                nnCounter++;
-
                 //if a better lower bound was found
                 if (lowerBound > _bestLowerBound ||
                     (lowerBound == _bestLowerBound && _norm < _bestNorm))
                 {
                     saveBestPenaltyState(lowerBound);
-                    nnCounter = 0;
+
+                    if (initialPhase) //double stepSize on improvement during the initial phase
+                        stepSize *= 2;
+
+                    if (p == period) //double period if the improvement happens on the final iteration of the current period, capped at initialPeriod
+                        period = std::min(initialPeriod, period * 2);
+                }
+                else  //no improvement
+                {
+                    // End the initial probing phase. Reset p so the reduced step size
+                    // gets a full period of iterations under the normal ascent regime.
+                    if (initialPhase && p > period / 2)
+                    {
+                        initialPhase = false;
+                        p = 0;
+                        stepSize = 3 * stepSize / 4;
+                    }
                 }
 
                 if (_norm == 0)
@@ -447,8 +467,6 @@ private:
 
             if (stopAscent)
                 break;
-
-            //TODO: adjust stepSize/period
         }
 
         restoreBestPenaltyState();
