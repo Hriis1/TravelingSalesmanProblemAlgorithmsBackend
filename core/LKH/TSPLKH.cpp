@@ -31,7 +31,6 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     long long lowerBound = ascent(adjMat);
 }
 
-//Returns the transformed cost between 2 cities
 long long TSPLKH::getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const
 {
     return (long long)(_config.precision * (long long)adjMat[i][j] + _nodes[i].pi + _nodes[j].pi);
