@@ -42,9 +42,7 @@ private:
 
 public:
 
-    TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}())
-        :TSPAlgo(seed), _config(config)
-    {}
+    TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}());
 
     void solve(const std::vector<std::vector<int>>& adjMat) override
     {

@@ -16,14 +16,14 @@ namespace TSPUtils
         ClusteredDeceptive
     };
 
-    int distRoundedInt(double x1, double y1, double x2, double y2)
+    inline int distRoundedInt(double x1, double y1, double x2, double y2)
     {
         const double dx = x1 - x2;
         const double dy = y1 - y2;
         return (int)std::lround(std::sqrt(dx * dx + dy * dy));
     }
 
-    std::vector<std::vector<int>> buildAdjMatrixFromCoords(const std::vector<std::vector<double>>& coords)
+    inline std::vector<std::vector<int>> buildAdjMatrixFromCoords(const std::vector<std::vector<double>>& coords)
     {
         int n = coords.size();
         std::vector<std::vector<int>> adjMat(n, std::vector<int>(n, 0));
@@ -43,7 +43,7 @@ namespace TSPUtils
         return adjMat;
     }
 
-    std::vector<std::vector<int>> generateTspAdjMatrix(unsigned int numCities, TspDatasetType type, int planeSize = 1000, unsigned int seed = std::random_device{}())
+    inline std::vector<std::vector<int>> generateTspAdjMatrix(unsigned int numCities, TspDatasetType type, int planeSize = 1000, unsigned int seed = std::random_device{}())
     {
         if (numCities < 2) return {};
 
@@ -138,7 +138,7 @@ namespace TSPUtils
         return adj;
     }
 
-    int calculateDist(const std::vector<std::vector<int>>& adjMat, std::vector<int>& path)
+    inline int calculateDist(const std::vector<std::vector<int>>& adjMat, std::vector<int>& path)
     {
         //Init dist
         int dist = 0;
@@ -162,7 +162,7 @@ namespace TSPUtils
         return dist;
     }
 
-    void twoOpt(std::vector<int>& path, const std::vector<std::vector<int>>& adjMat)
+    inline void twoOpt(std::vector<int>& path, const std::vector<std::vector<int>>& adjMat)
     {
         int n = path.size();
         bool improved = true;
@@ -191,7 +191,7 @@ namespace TSPUtils
         }
     }
 
-    int bruteForceOptimal(const std::vector<std::vector<int>>& adjMatrix, int startCity = 0)
+    inline int bruteForceOptimal(const std::vector<std::vector<int>>& adjMatrix, int startCity = 0)
     {
         const int n = (int)adjMatrix.size();
 
@@ -248,7 +248,7 @@ namespace TSPUtils
         return (int)best;
     }
 
-    std::vector<int> nearestNeighborPath(const std::vector<std::vector<int>>& adjMat, int startCity = 0, bool doTwoOpt = false)
+    inline std::vector<int> nearestNeighborPath(const std::vector<std::vector<int>>& adjMat, int startCity = 0, bool doTwoOpt = false)
     {
         const int n = adjMat.size();
 
@@ -314,7 +314,7 @@ namespace TSPUtils
         return path;
     }
 
-    int nearestNeighborDistance(const std::vector<std::vector<int>>& adjMat, int startCity = 0, bool doTwoOpt = false)
+    inline int nearestNeighborDistance(const std::vector<std::vector<int>>& adjMat, int startCity = 0, bool doTwoOpt = false)
     {
         auto path = nearestNeighborPath(adjMat, startCity, doTwoOpt);
 
