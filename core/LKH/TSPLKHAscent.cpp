@@ -59,6 +59,101 @@ bool TSPLKH::isOneTreeValid(int nCities) const
     return true;
 }
 
+#ifndef NDEBUG
+bool TSPLKH::validateMinimumOneTree(
+    const std::vector<std::vector<int>>& adjMat,
+    long long oneTreeCost) const
+{
+    const int n = (int)adjMat.size();
+    assert(n >= 3);
+    assert((int)_nodes.size() == n);
+    assert(_oneTreeExtraU >= 0 && _oneTreeExtraU < n);
+    assert(_oneTreeExtraV >= 0 && _oneTreeExtraV < n);
+    assert(_oneTreeExtraU != _oneTreeExtraV);
+    assert(isOneTreeValid(n));
+
+    std::vector<std::vector<char>> inMST(n, std::vector<char>(n, 0));
+    std::vector<int> mstDegree(n, 0);
+    long long recomputedCost = 0;
+    int roots = 0;
+    int mstEdges = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        const int parent = _nodes[i].parent;
+        if (parent == -1)
+        {
+            roots++;
+            continue;
+        }
+
+        assert(parent >= 0 && parent < n);
+        assert(parent != i);
+        assert(!inMST[i][parent]);
+
+        inMST[i][parent] = 1;
+        inMST[parent][i] = 1;
+        mstDegree[i]++;
+        mstDegree[parent]++;
+        recomputedCost += getTransformedCost(i, parent, adjMat);
+        mstEdges++;
+    }
+
+    assert(roots == 1);
+    assert(mstEdges == n - 1);
+    assert(mstDegree[_oneTreeExtraU] == 1);
+    assert(!inMST[_oneTreeExtraU][_oneTreeExtraV]);
+
+    recomputedCost += getTransformedCost(_oneTreeExtraU, _oneTreeExtraV, adjMat);
+    assert(recomputedCost == oneTreeCost);
+
+    long long selectedLeafBestExtra = LLONG_MAX;
+    for (int j = 0; j < n; j++)
+    {
+        if (j == _oneTreeExtraU || inMST[_oneTreeExtraU][j])
+            continue;
+
+        selectedLeafBestExtra = std::min(
+            selectedLeafBestExtra,
+            getTransformedCost(_oneTreeExtraU, j, adjMat));
+    }
+    assert(selectedLeafBestExtra == getTransformedCost(_oneTreeExtraU, _oneTreeExtraV, adjMat));
+
+    for (int leaf = 0; leaf < n; leaf++)
+    {
+        if (mstDegree[leaf] != 1)
+            continue;
+
+        long long leafBestExtra = LLONG_MAX;
+        for (int j = 0; j < n; j++)
+        {
+            if (j == leaf || inMST[leaf][j])
+                continue;
+
+            leafBestExtra = std::min(
+                leafBestExtra,
+                getTransformedCost(leaf, j, adjMat));
+        }
+
+        assert(leafBestExtra != LLONG_MAX);
+        assert(leafBestExtra <= selectedLeafBestExtra);
+    }
+
+    long long recomputedNorm = 0;
+    for (int i = 0; i < n; i++)
+    {
+        const long long v = (long long)_nodes[i].degree - 2;
+        recomputedNorm += v * v;
+        assert(_nodes[i].degree == mstDegree[i] +
+            (i == _oneTreeExtraU ? 1 : 0) +
+            (i == _oneTreeExtraV ? 1 : 0));
+    }
+    assert(recomputedNorm == _norm);
+
+    return true;
+}
+#endif
+
 void TSPLKH::addOneTreeEdge(int u, int v)
 {
     _nodes[u].degree++;
@@ -277,6 +372,10 @@ long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMa
 
     //Check if tree is built correctly during debug
     assert(isOneTreeValid(n));
+
+#ifndef NDEBUG
+    assert(validateMinimumOneTree(adjMat, totalCost));
+#endif
 
     return totalCost;
 }

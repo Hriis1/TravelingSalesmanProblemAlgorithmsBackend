@@ -46,7 +46,6 @@ public:
 
     void solve(const std::vector<std::vector<int>>& adjMat) override;
 
-
 private:
 
     //Returns the transformed cost between 2 cities
@@ -61,6 +60,12 @@ private:
     void restoreBestPenaltyState();
 
     bool isOneTreeValid(int nCities) const;
+
+#ifndef NDEBUG
+    bool validateMinimumOneTree(
+        const std::vector<std::vector<int>>& adjMat,
+        long long oneTreeCost) const;
+#endif
 
     //Increases the degrees of both nodes for a selected 1-tree edge.
     void addOneTreeEdge(int u, int v);
