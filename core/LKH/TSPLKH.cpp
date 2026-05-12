@@ -17,8 +17,8 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     //init containers
     _nodes.resize(n);
     _bestPis.assign(n, 0);
-    _candidateSet.clear();
-    _candidateSet.resize(n);
+    _candidates.clear();
+    _candidates.resize(n);
     for (int i = 0; i < n; i++)
     {
         _nodes[i].id = i;
@@ -26,11 +26,15 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
         _nodes[i].degree = 2;
         _nodes[i].lastDegree = 2;
         _nodes[i].parent = -1;
+        _nodes[i].parentCost = 0;
     }
     _piSum = 0;
 
     //Ascent and get the lower bound
     long long lowerBound = ascent(adjMat);
+
+    //Build alpha-nearness candidate sets from the final ascent 1-tree.
+    generateAlphaCandidates(adjMat);
 }
 
 long long TSPLKH::getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const

@@ -113,6 +113,12 @@ private:
 
     void computeBetaValues(int from, const std::vector<std::vector<LKHTreeEdge>>& mstAdj, std::vector<long long>& beta) const;
 
+    void addAlphaCandidate(int from, const LKHCandidate& candidate);
+
+    bool isMSTEdge(int u, int v) const;
+
+    void generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat);
+
 private:
     LKHConfig _config;                  //config data for solver
 
@@ -132,5 +138,5 @@ private:
     int _oneTreeExtraU = -1;            //first endpoint of the non-MST 1-tree edge
     int _oneTreeExtraV = -1;            //second endpoint of the non-MST 1-tree edge
 
-    std::vector<std::vector<LKHCandidate>> _candidateSet; //candidate next cities for each city by alpha nearness
+    std::vector<std::vector<LKHCandidate>> _candidates; //candidate next cities for each city by alpha nearness
 };

@@ -1,4 +1,5 @@
 #include "../TSPLKH.h"
+#include <algorithm>
 #include <stack>
 
 std::vector<std::vector<TSPLKH::LKHTreeEdge>> TSPLKH::buildMSTAdjacency(
@@ -60,9 +61,9 @@ void TSPLKH::computeBetaValues(
 
     std::stack<StackState> stack;
 
-    //The path from a city to itself has no edge, so its max is 0.
-    beta[from] = 0;
-    stack.push({ from, -1, 0 });
+    //The path from a city to itself has no edge.
+    beta[from] = LLONG_MIN;
+    stack.push({ from, -1, LLONG_MIN });
 
     while (!stack.empty())
     {
@@ -76,7 +77,8 @@ void TSPLKH::computeBetaValues(
                 continue;
 
             //Extend the path and keep the largest edge seen so far.
-            const long long nextPathMax = std::max(state.pathMax, edge.cost);
+            const long long nextPathMax =
+                state.pathMax == LLONG_MIN ? edge.cost : std::max(state.pathMax, edge.cost);
             beta[edge.to] = nextPathMax;
 
             stack.push({ edge.to, state.node, nextPathMax });
@@ -85,6 +87,99 @@ void TSPLKH::computeBetaValues(
 
 #ifndef NDEBUG
     for (int i = 0; i < n; i++)
-        assert(beta[i] != LLONG_MIN);
+        assert(i == from || beta[i] != LLONG_MIN);
 #endif
+}
+
+void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate)
+{
+    if (_config.maxCandidates <= 0)
+        return;
+
+    auto& candidates = _candidates[from];
+
+    auto isBetter = [](const LKHCandidate& a, const LKHCandidate& b)
+    {
+        if (a.alpha != b.alpha)
+            return a.alpha < b.alpha;
+        if (a.cost != b.cost)
+            return a.cost < b.cost;
+        return a.to < b.to;
+    };
+
+    //If the bounded list is full and this edge is not better, skip it.
+    if ((int)candidates.size() == _config.maxCandidates &&
+        !isBetter(candidate, candidates.back()))
+        return;
+
+    //Keep candidates sorted by alpha, then cost.
+    auto pos = std::lower_bound(
+        candidates.begin(),
+        candidates.end(),
+        candidate,
+        isBetter);
+    candidates.insert(pos, candidate);
+
+    //Keep only the best configured number of candidates.
+    if ((int)candidates.size() > _config.maxCandidates)
+        candidates.pop_back();
+}
+
+bool TSPLKH::isMSTEdge(int u, int v) const
+{
+    assert(u >= 0 && u < (int)_nodes.size());
+    assert(v >= 0 && v < (int)_nodes.size());
+
+    return _nodes[u].parent == v || _nodes[v].parent == u;
+}
+
+void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat)
+{
+    const int n = (int)adjMat.size();
+
+    assert((int)_nodes.size() == n);
+    assert(n > 0);
+    assert(_config.maxCandidates > 0);
+
+    _candidates.clear();
+    _candidates.resize(n);
+
+    //Use the final ascent MST to compute max-edge path values.
+    const auto mstAdj = buildMSTAdjacency(adjMat);
+
+    std::vector<long long> beta;
+    const long long selectedExtraCost = getTransformedCost(_oneTreeExtraU, _oneTreeExtraV, adjMat);
+
+    for (int from = 0; from < n; from++)
+    {
+        _candidates[from].reserve(std::min(_config.maxCandidates, n - 1));
+
+        //beta[to] = max MST edge on the path from 'from' to 'to'.
+        computeBetaValues(from, mstAdj, beta);
+
+        for (int to = 0; to < n; to++)
+        {
+            if (to == from)
+                continue;
+
+            const long long cost = getTransformedCost(from, to, adjMat);
+            long long alpha = 0;
+
+            //The selected 1-tree leaf uses its special extra edge as reference.
+            if (from == _oneTreeExtraU || to == _oneTreeExtraU)
+            {
+                alpha = isMSTEdge(from, to) ? 0 : cost - selectedExtraCost;
+            }
+            else
+            {
+                //For normal edges, alpha is the cost increase after replacing
+                //the largest edge on the MST path.
+                alpha = cost - beta[to];
+            }
+
+            assert(alpha >= 0);
+
+            addAlphaCandidate(from, { to, alpha, cost });
+        }
+    }
 }
