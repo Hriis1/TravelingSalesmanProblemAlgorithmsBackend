@@ -1,4 +1,5 @@
 #include "../TSPLKH.h"
+#include <stack>
 
 std::vector<std::vector<TSPLKH::LKHTreeEdge>> TSPLKH::buildMSTAdjacency(
     const std::vector<std::vector<int>>& adjMat) const
@@ -36,4 +37,54 @@ std::vector<std::vector<TSPLKH::LKHTreeEdge>> TSPLKH::buildMSTAdjacency(
 #endif
 
     return mstAdj;
+}
+
+void TSPLKH::computeBetaValues(
+    int from,
+    const std::vector<std::vector<LKHTreeEdge>>& mstAdj,
+    std::vector<long long>& beta) const
+{
+    const int n = (int)mstAdj.size();
+    assert(from >= 0 && from < n);
+
+    //Reset beta values before computing paths from this city.
+    beta.assign(n, LLONG_MIN);
+
+    //Store city, parent, and current max edge on the path from 'from'.
+    struct StackState
+    {
+        int node;
+        int parent;
+        long long pathMax;
+    };
+
+    std::stack<StackState> stack;
+
+    //The path from a city to itself has no edge, so its max is 0.
+    beta[from] = 0;
+    stack.push({ from, -1, 0 });
+
+    while (!stack.empty())
+    {
+        const StackState state = stack.top();
+        stack.pop();
+
+        //Visit all MST neighbors, skipping the edge we came from.
+        for (const auto& edge : mstAdj[state.node])
+        {
+            if (edge.to == state.parent)
+                continue;
+
+            //Extend the path and keep the largest edge seen so far.
+            const long long nextPathMax = std::max(state.pathMax, edge.cost);
+            beta[edge.to] = nextPathMax;
+
+            stack.push({ edge.to, state.node, nextPathMax });
+        }
+    }
+
+#ifndef NDEBUG
+    for (int i = 0; i < n; i++)
+        assert(beta[i] != LLONG_MIN);
+#endif
 }

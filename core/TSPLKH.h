@@ -109,8 +109,9 @@ private:
 
     long long ascent(const std::vector<std::vector<int>>& adjMat);
 
-    std::vector<std::vector<LKHTreeEdge>> buildMSTAdjacency(
-        const std::vector<std::vector<int>>& adjMat) const;
+    std::vector<std::vector<LKHTreeEdge>> buildMSTAdjacency(const std::vector<std::vector<int>>& adjMat) const;
+
+    void computeBetaValues(int from, const std::vector<std::vector<LKHTreeEdge>>& mstAdj, std::vector<long long>& beta) const;
 
 private:
     LKHConfig _config;                  //config data for solver
