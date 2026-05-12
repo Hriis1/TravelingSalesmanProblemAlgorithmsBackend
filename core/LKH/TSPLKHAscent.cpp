@@ -241,6 +241,7 @@ long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMa
         _nodes[i].lastDegree = _nodes[i].degree;
         _nodes[i].degree = 0;
         _nodes[i].parent = -1;
+        _nodes[i].parentCost = 0;
     }
 
     long long totalCost = 0;
@@ -278,6 +279,7 @@ long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMa
         {
             const int parent = bestParent[v];
             _nodes[v].parent = parent;
+            _nodes[v].parentCost = vCost;
             addOneTreeEdge(v, parent);
             totalCost += vCost;
         }

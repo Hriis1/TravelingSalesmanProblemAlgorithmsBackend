@@ -38,6 +38,7 @@ private:
         int degree = 0;                 //How many cities is it connected to in the 1-tree
         int lastDegree = 0;             //The degree in the prev iteration
         int parent = -1;                //Which city it connected to while building the 1-tree
+        long long parentCost = 0;       //The cost to the parent
     };
 
     //Stores a candidate for a node
