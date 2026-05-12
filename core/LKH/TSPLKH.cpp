@@ -14,9 +14,11 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     _bestLowerBound = LLONG_MIN;
     _bestNorm = LLONG_MAX;
 
-    //init the _nodes and reset _piSum
+    //init containers
     _nodes.resize(n);
     _bestPis.assign(n, 0);
+    _candidateSet.clear();
+    _candidateSet.resize(n);
     for (int i = 0; i < n; i++)
     {
         _nodes[i].id = i;

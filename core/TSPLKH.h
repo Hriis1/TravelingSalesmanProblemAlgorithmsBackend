@@ -40,6 +40,14 @@ private:
         int parent = -1;                //Which city it connected to while building the 1-tree
     };
 
+    //Stores a candidate for a node
+    struct LKHCandidate
+    {
+        int to;              // city this edge goes to
+        long long alpha;     // how promising the edge is
+        long long cost;      // transformed edge cost
+    };
+
 public:
 
     TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}());
@@ -106,4 +114,6 @@ private:
 
     int _oneTreeExtraU = -1;            //first endpoint of the non-MST 1-tree edge
     int _oneTreeExtraV = -1;            //second endpoint of the non-MST 1-tree edge
+
+    std::vector<std::vector<LKHCandidate>> _candidateSet; //candidate next cities for each city by alpha nearness
 };
