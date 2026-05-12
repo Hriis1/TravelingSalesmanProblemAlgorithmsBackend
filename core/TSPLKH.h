@@ -48,6 +48,18 @@ private:
         long long cost;      // transformed edge cost
     };
 
+    //One edge in the MST adjacency list used for alpha-nearness path queries.
+    struct LKHTreeEdge
+    {
+        int to = -1;
+        long long cost = 0;
+
+        LKHTreeEdge() = default;
+        LKHTreeEdge(int to, long long cost)
+            : to(to), cost(cost)
+        {}
+    };
+
 public:
 
     TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}());
@@ -95,6 +107,9 @@ private:
     long long buildMinimumOneTree(const std::vector<std::vector<int>>& adjMat);
 
     long long ascent(const std::vector<std::vector<int>>& adjMat);
+
+    std::vector<std::vector<LKHTreeEdge>> buildMSTAdjacency(
+        const std::vector<std::vector<int>>& adjMat) const;
 
 private:
     LKHConfig _config;                  //config data for solver
