@@ -159,4 +159,9 @@ private:
     int _oneTreeExtraV = -1;            //second endpoint of the non-MST 1-tree edge
 
     std::vector<std::vector<LKHCandidate>> _candidates; //candidate next cities for each city by alpha nearness
+
+    //Internal tour representation
+    std::vector<int> _pred;             //_pred[city] - the previous city in the tour
+    std::vector<int> _succ;             //_succ[city] - the next city in the tour
+    std::vector<int> _rank;             //_rank[city] - the position of the city in the tour
 };
