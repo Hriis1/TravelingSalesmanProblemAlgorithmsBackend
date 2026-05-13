@@ -23,6 +23,8 @@ struct LKHConfig
     int initialStepSize = 1;            // LKH default: 1
 
     long long precision = 100;          //precision for calculating transformed costs
+
+    bool symmetrizeCandidates = true;   //Weather or not to make the candidate sets for each city symetric
 };
 
 
@@ -118,6 +120,8 @@ private:
     bool isMSTEdge(int u, int v) const;
 
     void generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat);
+
+    void symmetrizeCandidates();
 
 private:
     LKHConfig _config;                  //config data for solver

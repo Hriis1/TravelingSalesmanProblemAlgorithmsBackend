@@ -182,4 +182,9 @@ void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat
             addAlphaCandidate(from, { to, alpha, cost });
         }
     }
+
+    //Symmetrize candidates
+    if (_config.symmetrizeCandidates)
+        symmetrizeCandidates();
+
 }
