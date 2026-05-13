@@ -109,15 +109,16 @@ void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate, bool bou
 
     //If the bounded list is full and this edge is not better, skip it.
     if ((int)candidates.size() == _config.maxCandidates &&
-        !isBetter(candidate, candidates.back()))
+        !(candidate < candidates.back()))
         return;
 
     //Keep candidates sorted by alpha, then cost.
     auto pos = std::lower_bound(
         candidates.begin(),
         candidates.end(),
-        candidate,
-        isBetter);
+        candidate);
+
+    assert(!isCandidateOf(from, candidate.to));
     candidates.insert(pos, candidate);
 
     //Keep only the best configured number of candidates.
