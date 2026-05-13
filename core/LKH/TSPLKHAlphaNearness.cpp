@@ -93,22 +93,16 @@ void TSPLKH::computeBetaValues(
 
 void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate, bool bounded)
 {
-    if (_config.maxCandidates <= 0)
+    assert(!isCandidateOf(from, candidate.to));
+
+    if (bounded && _config.maxCandidates <= 0)
         return;
 
     auto& candidates = _candidates[from];
 
-    auto isBetter = [](const LKHCandidate& a, const LKHCandidate& b)
-    {
-        if (a.alpha != b.alpha)
-            return a.alpha < b.alpha;
-        if (a.cost != b.cost)
-            return a.cost < b.cost;
-        return a.to < b.to;
-    };
-
     //If the bounded list is full and this edge is not better, skip it.
-    if ((int)candidates.size() == _config.maxCandidates &&
+    if (bounded &&
+        (int)candidates.size() == _config.maxCandidates &&
         !(candidate < candidates.back()))
         return;
 
@@ -118,13 +112,14 @@ void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate, bool bou
         candidates.end(),
         candidate);
 
-    assert(!isCandidateOf(from, candidate.to));
     candidates.insert(pos, candidate);
 
     //Keep only the best configured number of candidates.
-    if(bounded)
+    if (bounded)
+    {
         if ((int)candidates.size() > _config.maxCandidates)
             candidates.pop_back();
+    }
 }
 
 bool TSPLKH::isMSTEdge(int u, int v) const
@@ -193,6 +188,25 @@ void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat
 
 void TSPLKH::symmetrizeCandidates()
 {
+    const int n = _candidates.size();
+
+    // Remember original sizes so newly added reverse edges are not reprocessed.
+    std::vector<int> originalSize(n);
+    for (int i = 0; i < n; i++)
+        originalSize[i] = _candidates[i].size();
+
+    // Add missing reverse edges.
+    for (int from = 0; from < n; from++)
+    {
+        for (int idx = 0; idx < originalSize[from]; idx++)
+        {
+            const auto& candidate = _candidates[from][idx];
+            const int to = candidate.to;
+
+            if (!isCandidateOf(to, from))
+                addAlphaCandidate(to, { from, candidate.alpha, candidate.cost }, false);
+        }
+    }
 }
 
 bool TSPLKH::isCandidateOf(int city, int candidateToCheck) const
