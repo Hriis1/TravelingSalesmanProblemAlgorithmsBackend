@@ -123,6 +123,8 @@ private:
 
     void symmetrizeCandidates();
 
+    bool isCandidateOf(int city, int candidateToCheck) const;
+
 private:
     LKHConfig _config;                  //config data for solver
 

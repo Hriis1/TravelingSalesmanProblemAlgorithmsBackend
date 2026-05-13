@@ -188,3 +188,16 @@ void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat
         symmetrizeCandidates();
 
 }
+
+bool TSPLKH::isCandidateOf(int city, int candidateToCheck) const
+{
+    const auto& candidates = _candidates[city];
+
+    for (const auto& candidate : candidates)
+    {
+        if (candidate.to == candidateToCheck)
+            return true;
+    }
+
+    return false;
+}
