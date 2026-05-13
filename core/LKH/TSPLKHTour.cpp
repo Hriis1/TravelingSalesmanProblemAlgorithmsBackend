@@ -52,8 +52,11 @@ void TSPLKH::addCityToTour(int city, int prev, int rank)
 bool TSPLKH::validateTourInternal(int startCity) const
 {
     const int n = (int)_tourInternal.size();
-    assert(n >= 3);
-    assert(startCity >= 0 && startCity < n);
+    if (n < 3)
+        return false;
+
+    if (startCity < 0 || startCity >= n)
+        return false;
 
     std::vector<char> seenCity(n, 0);
     std::vector<char> seenRank(n, 0);
@@ -61,29 +64,48 @@ bool TSPLKH::validateTourInternal(int startCity) const
     int curr = startCity;
     for (int step = 0; step < n; step++)
     {
-        assert(curr >= 0 && curr < n);
-        assert(!seenCity[curr]);
+        if (curr < 0 || curr >= n)
+            return false;
+
+        if (seenCity[curr])
+            return false;
+
         seenCity[curr] = 1;
 
         const auto& node = _tourInternal[curr];
-        assert(node.prev >= 0 && node.prev < n);
-        assert(node.next >= 0 && node.next < n);
-        assert(node.rank >= 0 && node.rank < n);
-        assert(!seenRank[node.rank]);
+        if (node.prev < 0 || node.prev >= n)
+            return false;
+
+        if (node.next < 0 || node.next >= n)
+            return false;
+
+        if (node.rank < 0 || node.rank >= n)
+            return false;
+
+        if (seenRank[node.rank])
+            return false;
+
         seenRank[node.rank] = 1;
 
-        assert(_tourInternal[node.next].prev == curr);
-        assert(_tourInternal[node.prev].next == curr);
+        if (_tourInternal[node.next].prev != curr)
+            return false;
+
+        if (_tourInternal[node.prev].next != curr)
+            return false;
 
         curr = node.next;
     }
 
-    assert(curr == startCity);
+    if (curr != startCity)
+        return false;
 
     for (int i = 0; i < n; i++)
     {
-        assert(seenCity[i]);
-        assert(seenRank[i]);
+        if (!seenCity[i])
+            return false;
+
+        if (!seenRank[i])
+            return false;
     }
 
     return true;
