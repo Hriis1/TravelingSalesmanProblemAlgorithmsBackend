@@ -46,9 +46,23 @@ private:
     //Stores a candidate for a node
     struct LKHCandidate
     {
-        int to;              // city this edge goes to
-        long long alpha;     // how promising the edge is
-        long long cost;      // transformed edge cost
+        int to = -1;              // city this edge goes to
+        long long alpha = -1;     // how promising the edge is
+        long long cost = -1;      // transformed edge cost
+
+        LKHCandidate() = default;
+        LKHCandidate(int to, long long alpha, long long cost)
+            : to(to), alpha(alpha), cost(cost)
+        {}
+
+        bool operator<(const LKHCandidate& other) const
+        {
+            if (alpha != other.alpha)
+                return alpha < other.alpha;
+            if (cost != other.cost)
+                return cost < other.cost;
+            return to < other.to;
+        }
     };
 
     //One edge in the MST adjacency list used for alpha-nearness path queries.
@@ -115,7 +129,7 @@ private:
 
     void computeBetaValues(int from, const std::vector<std::vector<LKHTreeEdge>>& mstAdj, std::vector<long long>& beta) const;
 
-    void addAlphaCandidate(int from, const LKHCandidate& candidate);
+    void addAlphaCandidate(int from, const LKHCandidate& candidate, bool bounded);
 
     bool isMSTEdge(int u, int v) const;
 

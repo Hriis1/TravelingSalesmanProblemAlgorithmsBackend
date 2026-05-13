@@ -91,7 +91,7 @@ void TSPLKH::computeBetaValues(
 #endif
 }
 
-void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate)
+void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate, bool bounded)
 {
     if (_config.maxCandidates <= 0)
         return;
@@ -121,8 +121,9 @@ void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate)
     candidates.insert(pos, candidate);
 
     //Keep only the best configured number of candidates.
-    if ((int)candidates.size() > _config.maxCandidates)
-        candidates.pop_back();
+    if(bounded)
+        if ((int)candidates.size() > _config.maxCandidates)
+            candidates.pop_back();
 }
 
 bool TSPLKH::isMSTEdge(int u, int v) const
@@ -179,7 +180,7 @@ void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat
 
             assert(alpha >= 0);
 
-            addAlphaCandidate(from, { to, alpha, cost });
+            addAlphaCandidate(from, { to, alpha, cost }, true);
         }
     }
 
@@ -187,6 +188,10 @@ void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat
     if (_config.symmetrizeCandidates)
         symmetrizeCandidates();
 
+}
+
+void TSPLKH::symmetrizeCandidates()
+{
 }
 
 bool TSPLKH::isCandidateOf(int city, int candidateToCheck) const
