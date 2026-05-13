@@ -6,10 +6,9 @@ TSPLKH::TSPLKH(const LKHConfig& config, unsigned int seed)
 
 void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
 {
-    assert
-
     //num cities
     int n = adjMat.size();
+    assert(n >= 3);
 
     //Reset values
     _bestPisSum = 0;
@@ -21,6 +20,8 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     _bestPis.assign(n, 0);
     _candidates.clear();
     _candidates.resize(n);
+    _tourInternal.clear();
+    _tourInternal.resize(n);
     for (int i = 0; i < n; i++)
     {
         _nodes[i].id = i;
@@ -37,6 +38,9 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
 
     //Build alpha-nearness candidate sets from the final ascent 1-tree.
     generateAlphaCandidates(adjMat);
+
+    //Build the initial tour using the internal representation using NN
+    buildInitialTourNN(adjMat, 0);
 }
 
 long long TSPLKH::getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const

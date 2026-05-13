@@ -155,6 +155,8 @@ private:
     //Tour manipulation funcs
     void buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity = 0);
 
+    void addCityToTour(int city, int prev, int rank);
+
 private:
     LKHConfig _config;                  //config data for solver
 
