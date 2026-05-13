@@ -39,10 +39,52 @@ void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int
     //Finish the cycle
     _tourInternal[currCity].next = startCity;
     _tourInternal[startCity].prev = currCity;
+
+    assert(validateTourInternal(startCity));
 }
 
 void TSPLKH::addCityToTour(int city, int prev, int rank)
 {
     _tourInternal[city].prev = prev;
     _tourInternal[city].rank = rank;
+}
+
+bool TSPLKH::validateTourInternal(int startCity) const
+{
+    const int n = (int)_tourInternal.size();
+    assert(n >= 3);
+    assert(startCity >= 0 && startCity < n);
+
+    std::vector<char> seenCity(n, 0);
+    std::vector<char> seenRank(n, 0);
+
+    int curr = startCity;
+    for (int step = 0; step < n; step++)
+    {
+        assert(curr >= 0 && curr < n);
+        assert(!seenCity[curr]);
+        seenCity[curr] = 1;
+
+        const auto& node = _tourInternal[curr];
+        assert(node.prev >= 0 && node.prev < n);
+        assert(node.next >= 0 && node.next < n);
+        assert(node.rank >= 0 && node.rank < n);
+        assert(!seenRank[node.rank]);
+        seenRank[node.rank] = 1;
+
+        assert(_tourInternal[node.next].prev == curr);
+        assert(_tourInternal[node.prev].next == curr);
+
+        curr = node.next;
+    }
+
+    assert(curr == startCity);
+
+    for (int i = 0; i < n; i++)
+    {
+        assert(seenCity[i]);
+        assert(seenRank[i]);
+    }
+
+    return true;
 }

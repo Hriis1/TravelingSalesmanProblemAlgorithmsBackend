@@ -157,6 +157,8 @@ private:
 
     void addCityToTour(int city, int prev, int rank);
 
+    bool validateTourInternal(int startCity = 0) const;
+
 private:
     LKHConfig _config;                  //config data for solver
 
