@@ -77,6 +77,19 @@ private:
         {}
     };
 
+    //Internal representation of a city in the tour
+    struct LKHTourNode
+    {
+        int prev = -1;                  //the previous city in the tour
+        int next = -1;                  //the next city in the tour
+        int rank = -1;                  //the position of the city in the tour
+
+        LKHTourNode() = default;
+        LKHTourNode(int prev, int next, int rank)
+            : prev(prev), next(next), rank(rank)
+        {}
+    };
+
 public:
 
     TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}());
@@ -139,6 +152,9 @@ private:
 
     bool isCandidateOf(int city, int candidateToCheck) const;
 
+    //Tour manipulation funcs
+    void buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity = 0);
+
 private:
     LKHConfig _config;                  //config data for solver
 
@@ -160,8 +176,5 @@ private:
 
     std::vector<std::vector<LKHCandidate>> _candidates; //candidate next cities for each city by alpha nearness
 
-    //Internal tour representation
-    std::vector<int> _pred;             //_pred[city] - the previous city in the tour
-    std::vector<int> _succ;             //_succ[city] - the next city in the tour
-    std::vector<int> _rank;             //_rank[city] - the position of the city in the tour
+    std::vector<LKHTourNode> _tourInternal;             //Internal tour representation                   
 };

@@ -6,6 +6,8 @@ TSPLKH::TSPLKH(const LKHConfig& config, unsigned int seed)
 
 void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
 {
+    assert
+
     //num cities
     int n = adjMat.size();
 
