@@ -169,6 +169,8 @@ private:
     //k-opt search
     void activateAllNodes(int nCities);
 
+    int removeFirstActiveNode();    //removes and returns the next city that should be tried in LK search
+
 private:
     LKHConfig _config;                  //config data for solver
 

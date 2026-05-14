@@ -10,3 +10,15 @@ void TSPLKH::activateAllNodes(int nCities)
 	for (size_t i = 0; i < nCities; i++)
 		_activeNodes.push_back(i);
 }
+
+int TSPLKH::removeFirstActiveNode()
+{
+	if (_activeNodes.empty())
+		return -1;
+
+	int city = _activeNodes.front();
+	_activeNodes.pop_front();
+	_isActive[city] = 0;
+
+	return city;
+}
