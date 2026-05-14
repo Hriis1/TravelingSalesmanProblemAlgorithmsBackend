@@ -40,6 +40,7 @@ void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int
     _tourInternal[currCity].next = startCity;
     _tourInternal[startCity].prev = currCity;
 
+    //Validate the initial tour
     assert(validateTourInternal(startCity));
 }
 
@@ -109,4 +110,9 @@ bool TSPLKH::validateTourInternal(int startCity) const
     }
 
     return true;
+}
+
+bool TSPLKH::isEdgeInTour(int a, int b) const
+{
+    return _tourInternal[a].prev == b || _tourInternal[a].next == b;
 }

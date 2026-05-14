@@ -159,6 +159,8 @@ private:
 
     bool validateTourInternal(int startCity = 0) const;
 
+    bool isEdgeInTour(int a, int b) const;
+
 private:
     LKHConfig _config;                  //config data for solver
 
