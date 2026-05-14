@@ -2,6 +2,7 @@
 #include <climits>
 #include <array>
 #include <cassert>
+#include <deque>
 
 #include "TSPAlgo.h"
 #include "TSPSolution.h"
@@ -163,7 +164,10 @@ private:
 
     long long calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity = 0) const;
 
-    std::vector<int> buildOutputPath(int startCity = 0) const; //builds the path using std::vector<int>
+    std::vector<int> buildOutputPath(int startCity = 0) const;  //builds the path using std::vector<int>
+
+    //k-opt search
+    void activateAllNodes(int nCities);
 
 private:
     LKHConfig _config;                  //config data for solver
@@ -186,5 +190,9 @@ private:
 
     std::vector<std::vector<LKHCandidate>> _candidates; //candidate next cities for each city by alpha nearness
 
-    std::vector<LKHTourNode> _tourInternal;             //Internal tour representation                   
+    std::vector<LKHTourNode> _tourInternal;             //Internal tour representation  
+
+    //k-opt search
+    std::deque<int> _activeNodes;       //cities that still need to be tried                      
+    std::vector<char> _isActive;        //flags for weather or not each city is active
 };
