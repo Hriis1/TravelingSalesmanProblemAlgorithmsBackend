@@ -171,6 +171,8 @@ private:
 
     int removeFirstActiveNode();    //removes and returns the next city that should be tried in LK search
 
+    void activateNode(int city);    //activates the city if it isnt already active    
+
 private:
     LKHConfig _config;                  //config data for solver
 

@@ -22,3 +22,12 @@ int TSPLKH::removeFirstActiveNode()
 
 	return city;
 }
+
+void TSPLKH::activateNode(int city)
+{
+	if (_isActive[city])
+		return;
+
+	_isActive[city] = 1;
+	_activeNodes.push_back(city);
+}
