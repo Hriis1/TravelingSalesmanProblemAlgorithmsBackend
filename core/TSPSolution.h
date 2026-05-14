@@ -11,7 +11,7 @@ struct TSPSolution
 public:
 
 	//vars
-	int dist = INT_MAX;
+	long long dist = LLONG_MAX;
 	std::vector<int> path;
 
 	//funcs
