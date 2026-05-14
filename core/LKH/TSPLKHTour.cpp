@@ -116,3 +116,17 @@ bool TSPLKH::isEdgeInTour(int a, int b) const
 {
     return _tourInternal[a].prev == b || _tourInternal[a].next == b;
 }
+
+long long TSPLKH::calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity) const
+{
+    long long dist = 0;
+    int currCity = startCity;
+
+    do
+    {
+        dist += adjMat[currCity][_tourInternal[currCity].next];
+        currCity = _tourInternal[currCity].next;
+    } while (currCity != startCity);
+
+    return dist;
+}

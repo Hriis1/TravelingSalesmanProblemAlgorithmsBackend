@@ -161,6 +161,8 @@ private:
 
     bool isEdgeInTour(int a, int b) const;
 
+    long long calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity = 0) const;
+
 private:
     LKHConfig _config;                  //config data for solver
 
