@@ -163,6 +163,8 @@ private:
 
     long long calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity = 0) const;
 
+    std::vector<int> buildOutputPath(int startCity = 0) const; //builds the path using std::vector<int>
+
 private:
     LKHConfig _config;                  //config data for solver
 

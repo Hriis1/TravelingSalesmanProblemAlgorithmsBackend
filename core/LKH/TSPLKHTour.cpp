@@ -130,3 +130,24 @@ long long TSPLKH::calculateInternalTourCost(const std::vector<std::vector<int>>&
 
     return dist;
 }
+
+std::vector<int> TSPLKH::buildOutputPath(int startCity) const
+{
+    int n = _tourInternal.size();
+    assert(n > 0);
+
+    std::vector<int> path(n);
+
+    //add start city
+    int currCity = startCity;
+    path[0] = startCity;
+
+    //add the other cities
+    for (size_t i = 1; i < n; i++)
+    {
+        currCity = _tourInternal[currCity].next;
+        path[i] = currCity;
+    }
+
+    return path;
+}
