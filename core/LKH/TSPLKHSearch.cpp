@@ -47,9 +47,55 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 		//deleted edge is (t1, t2).
 		const long long gainFromDeletedEdge = adjMat[t1][t2];
 
-		// this will call the variable-depth LK move search.
-		// if (trySequentialMove(t1, t2, gainFromDeletedEdge, adjMat))
-		//     return true;
+		if (trySequentialMove(t1, t2, gainFromDeletedEdge, adjMat))
+			return true;
+	}
+
+	return false;
+}
+
+bool TSPLKH::trySequentialMove(int t1, int t2, long long gain, const std::vector<std::vector<int>>& adjMat)
+{
+	assert(isEdgeInTour(t1, t2));
+
+	//is the edge a forward or backward move
+	const bool forward = _tourInternal[t1].next == t2;
+
+	for (const auto& candidate : _candidates[t2]) //for each of the candidate next eges of t2
+	{
+		const int t3 = candidate.to;
+
+		//The added edge (t2, t3) must not already be a tour edge.
+		if (isEdgeInTour(t2, t3))
+			continue;
+
+		const long long gainAfterAdd = gain - adjMat[t2][t3];
+		if (gainAfterAdd <= 0)
+			continue;
+
+		const int t4 = forward ? _tourInternal[t3].prev : _tourInternal[t3].next;
+
+		//All four endpoints must be distinct for this 2-opt close.
+		if (t3 == t1 || t3 == t2 || t4 == t1 || t4 == t2)
+			continue;
+
+		const long long totalGain =
+			gainAfterAdd + adjMat[t3][t4] - adjMat[t4][t1];
+
+		if (totalGain <= 0)
+			continue;
+
+		if (forward)
+			applyTwoOptMove(t1, t2, t3, t4);
+		else
+			applyTwoOptMove(t2, t1, t4, t3);
+
+		activateNode(t1);
+		activateNode(t2);
+		activateNode(t3);
+		activateNode(t4);
+
+		return true;
 	}
 
 	return false;

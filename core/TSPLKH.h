@@ -166,6 +166,10 @@ private:
 
     std::vector<int> buildOutputPath(int startCity = 0) const;  //builds the path using std::vector<int>
 
+    void refreshTourRanks(int startCity = 0);
+
+    void applyTwoOptMove(int t1, int t2, int t3, int t4);
+
     //k-opt search
     void activateAllNodes(int nCities);
 
@@ -174,6 +178,8 @@ private:
     void activateNode(int city);    //activates the city if it isnt already active    
 
     bool tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adjMat); //This tries to find an improving LK move that starts from city t1
+
+    bool trySequentialMove(int t1, int t2, long long gain, const std::vector<std::vector<int>>& adjMat);
 
 private:
     LKHConfig _config;                  //config data for solver

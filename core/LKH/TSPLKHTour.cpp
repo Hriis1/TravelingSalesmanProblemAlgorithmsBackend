@@ -151,3 +151,42 @@ std::vector<int> TSPLKH::buildOutputPath(int startCity) const
 
     return path;
 }
+
+void TSPLKH::refreshTourRanks(int startCity)
+{
+    int currCity = startCity;
+    int rank = 0;
+
+    do
+    {
+        _tourInternal[currCity].rank = rank++;
+        currCity = _tourInternal[currCity].next;
+    } while (currCity != startCity);
+}
+
+void TSPLKH::applyTwoOptMove(int t1, int t2, int t3, int t4)
+{
+    assert(_tourInternal[t1].next == t2);
+    assert(_tourInternal[t3].prev == t4);
+
+    //Reverse the segment between t2 and t4.
+    int currCity = t2;
+    while (true)
+    {
+        std::swap(_tourInternal[currCity].prev, _tourInternal[currCity].next);
+        if (currCity == t4)
+            break;
+
+        currCity = _tourInternal[currCity].prev;
+    }
+
+    //Reconnect the two broken tour edges in their improved arrangement.
+    _tourInternal[t1].next = t4;
+    _tourInternal[t4].prev = t1;
+    _tourInternal[t2].next = t3;
+    _tourInternal[t3].prev = t2;
+
+    refreshTourRanks(0);
+
+    assert(validateTourInternal(0));
+}
