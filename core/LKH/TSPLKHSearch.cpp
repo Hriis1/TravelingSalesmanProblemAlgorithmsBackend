@@ -31,3 +31,26 @@ void TSPLKH::activateNode(int city)
 	_isActive[city] = 1;
 	_activeNodes.push_back(city);
 }
+
+bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adjMat)
+{
+	assert(t1 >= 0 && t1 < (int)_tourInternal.size());
+
+	for (int i = 0; i < 2; i++)
+	{
+		//try edge with prev city and next city
+		const int t2 = i == 0 ? _tourInternal[t1].prev : _tourInternal[t1].next;
+
+		if (t2 < 0)
+			continue;
+
+		//deleted edge is (t1, t2).
+		const long long gainFromDeletedEdge = adjMat[t1][t2];
+
+		// this will call the variable-depth LK move search.
+		// if (trySequentialMove(t1, t2, gainFromDeletedEdge, adjMat))
+		//     return true;
+	}
+
+	return false;
+}

@@ -173,6 +173,8 @@ private:
 
     void activateNode(int city);    //activates the city if it isnt already active    
 
+    bool tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adjMat); //This tries to find an improving LK move that starts from city t1
+
 private:
     LKHConfig _config;                  //config data for solver
 
