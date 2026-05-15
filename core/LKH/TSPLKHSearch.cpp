@@ -100,3 +100,20 @@ bool TSPLKH::trySequentialMove(int t1, int t2, long long gain, const std::vector
 
 	return false;
 }
+
+void TSPLKH::runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat)
+{
+	int n = adjMat.size();
+
+	activateAllNodes(n); //activate all cities
+
+	//While there are active cities try an improving move on them
+	while (true)
+	{
+		int t1 = removeFirstActiveNode();
+		if (t1 == -1)
+			break;
+
+		tryImproveFromNode(t1, adjMat);
+	}
+}

@@ -181,6 +181,8 @@ private:
 
     bool trySequentialMove(int t1, int t2, long long gain, const std::vector<std::vector<int>>& adjMat);
 
+    void runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat);
+
 private:
     LKHConfig _config;                  //config data for solver
 
