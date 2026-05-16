@@ -245,6 +245,12 @@ private:
 
     void initializeMoveState(LKHMoveState& state, int t1, int t2, long long initialGain); //It prepares the move chain after choosing the first deleted edge (t1, t2)
 
+    bool isEndpointUsed(const LKHMoveState& state, int city) const; //checks weather a city is already used as a t endpoint
+
+    bool tryApplyKOptMove(const LKHMoveState& state); //tries to apply the currently recorded k-opt move
+
+    void activateMoveNodes(const LKHMoveState& state); //activates all cities touched by the accepted move
+
 private:
     LKHConfig _config;                  //config data for solver
 

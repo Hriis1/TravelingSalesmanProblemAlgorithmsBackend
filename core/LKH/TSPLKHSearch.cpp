@@ -63,13 +63,11 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 	assert(state.t.size() >= 2);
 
 	int t1 = state.t[0];
-	int t2 = state.t[1];
+	int t2 = state.t.back();
 	long long initialGain = state.gain;
 
-	assert(isEdgeInTour(t1, t2));
-
-	//is the edge a forward or backward move
-	const bool forward = _tourInternal[t1].next == t2;
+	if (_config.backtrackingLimit > 0 && state.backtrackingCount >= _config.backtrackingLimit)
+		return false;
 
 	for (const auto& candidate : _candidates[t2]) //for each of the candidate next eges of t2
 	{
@@ -79,8 +77,8 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 		if (isEdgeInTour(t2, t3))
 			continue;
 
-		//Do not add the same candidate edge twice in one LK chain.
-		if (isAddedEdge(state, t2, t3))
+		//A city can only appear once as a move endpoint before the final close to t1.
+		if (isEndpointUsed(state, t3))
 			continue;
 
 		const long long gainAfterAdd = initialGain - adjMat[t2][t3];
@@ -92,57 +90,64 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 		state.pushEndpoint(t3);
 		state.gain = gainAfterAdd;
 
-		const int t4 = forward ? _tourInternal[t3].prev : _tourInternal[t3].next;
+		const int tourNeighbors[2] = { _tourInternal[t3].prev, _tourInternal[t3].next };
 
-		//All four endpoints must be distinct for this 2-opt close.
-		if (t3 == t1 || t3 == t2 || t4 == t1 || t4 == t2)
+		for (int i = 0; i < 2; i++)
 		{
-			//Undo the added edge before trying the next candidate.
-			state.gain = initialGain;
-			state.popEndpoint();
-			state.undoAddedEdge();
-			continue;
-		}
+			const int t4 = tourNeighbors[i];
 
-		//Do not delete the same tour edge twice in one LK chain.
-		if (isDeletedEdge(state, t3, t4))
-		{
-			//Undo the added edge before trying the next candidate.
-			state.gain = initialGain;
-			state.popEndpoint();
-			state.undoAddedEdge();
-			continue;
-		}
+			//The next deleted edge must lead to a new endpoint.
+			if (isEndpointUsed(state, t4))
+				continue;
 
-		//Record the deleted tour edge so the branch now represents t1,t2,t3,t4.
-		state.recordDeletedEdge(t3, t4);
-		state.pushEndpoint(t4);
-		state.gain += adjMat[t3][t4];
+			//Record the deleted tour edge so the branch now ends at t4.
+			state.recordDeletedEdge(t3, t4);
+			state.pushEndpoint(t4);
+			state.gain += adjMat[t3][t4];
 
-		const long long totalGain = state.gain - adjMat[t4][t1];
+			const long long gainBeforeClose = state.gain;
 
-		if (totalGain <= 0)
-		{
-			//Undo this branch before trying the next candidate.
-			state.gain = initialGain;
+			//Try closing the chain by adding the edge from the current endpoint to t1.
+			if (!isEdgeInTour(t4, t1) && !isAddedEdge(state, t4, t1))
+			{
+				const long long totalGain = state.gain - adjMat[t4][t1];
+				if (totalGain > 0)
+				{
+					state.recordAddedEdge(t4, t1);
+					state.gain = totalGain;
+
+					if (tryApplyKOptMove(state))
+					{
+						activateMoveNodes(state);
+						return true;
+					}
+
+					state.gain = gainBeforeClose;
+					state.undoAddedEdge();
+				}
+			}
+
+			//If closing did not work, continue the sequential LK chain deeper.
+			if (state.depth < _config.maxDepth && trySequentialMove(state, adjMat))
+				return true;
+
+			//This branch failed, so undo the last deleted edge before trying the next one.
+			state.backtrackingCount++;
+			state.gain = gainAfterAdd;
 			state.popEndpoint();
 			state.undoDeletedEdge();
-			state.popEndpoint();
-			state.undoAddedEdge();
-			continue;
+
+			if (_config.backtrackingLimit > 0 && state.backtrackingCount >= _config.backtrackingLimit)
+				break;
 		}
 
-		if (forward)
-			applyTwoOptMove(t1, t2, t3, t4);
-		else
-			applyTwoOptMove(t2, t1, t4, t3);
+		//Undo the added edge before trying the next candidate.
+		state.gain = initialGain;
+		state.popEndpoint();
+		state.undoAddedEdge();
 
-		activateNode(t1);
-		activateNode(t2);
-		activateNode(t3);
-		activateNode(t4);
-
-		return true;
+		if (_config.backtrackingLimit > 0 && state.backtrackingCount >= _config.backtrackingLimit)
+			return false;
 	}
 
 	return false;
@@ -202,4 +207,129 @@ void TSPLKH::initializeMoveState(LKHMoveState& state, int t1, int t2, long long 
 	state.pushEndpoint(t2);
 	state.recordDeletedEdge(t1, t2);
 	state.gain += initialGain;
+}
+
+bool TSPLKH::isEndpointUsed(const LKHMoveState& state, int city) const
+{
+	for (int endpoint : state.t)
+	{
+		if (endpoint == city)
+			return true;
+	}
+
+	return false;
+}
+
+bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
+{
+	const int n = (int)_tourInternal.size();
+	if (n < 3 || state.added.size() != state.deleted.size())
+		return false;
+
+	std::vector<std::array<int, 2>> adj(n);
+	for (int city = 0; city < n; city++)
+		adj[city] = { _tourInternal[city].prev, _tourInternal[city].next };
+
+	auto removeEdge = [&](int a, int b) -> bool
+	{
+		if (a < 0 || a >= n || b < 0 || b >= n)
+			return false;
+
+		if (adj[a][0] == b)
+			adj[a][0] = -1;
+		else if (adj[a][1] == b)
+			adj[a][1] = -1;
+		else
+			return false;
+
+		if (adj[b][0] == a)
+			adj[b][0] = -1;
+		else if (adj[b][1] == a)
+			adj[b][1] = -1;
+		else
+			return false;
+
+		return true;
+	};
+
+	auto addEdge = [&](int a, int b) -> bool
+	{
+		if (a < 0 || a >= n || b < 0 || b >= n || a == b)
+			return false;
+
+		if (adj[a][0] == b || adj[a][1] == b)
+			return false;
+
+		if (adj[b][0] == a || adj[b][1] == a)
+			return false;
+
+		int aSlot = adj[a][0] == -1 ? 0 : (adj[a][1] == -1 ? 1 : -1);
+		int bSlot = adj[b][0] == -1 ? 0 : (adj[b][1] == -1 ? 1 : -1);
+		if (aSlot == -1 || bSlot == -1)
+			return false;
+
+		adj[a][aSlot] = b;
+		adj[b][bSlot] = a;
+		return true;
+	};
+
+	//Apply the recorded edge exchange to a temporary degree-2 graph.
+	for (const auto& edge : state.deleted)
+	{
+		if (!removeEdge(edge.first, edge.second))
+			return false;
+	}
+
+	for (const auto& edge : state.added)
+	{
+		if (!addEdge(edge.first, edge.second))
+			return false;
+	}
+
+	std::vector<LKHTourNode> newTour(n);
+	std::vector<char> visited(n, 0);
+
+	const int startCity = state.t[0];
+	int prevCity = -1;
+	int currCity = startCity;
+
+	//Traverse the temporary graph; it is valid only if it forms one Hamiltonian cycle.
+	for (int rank = 0; rank < n; rank++)
+	{
+		if (currCity < 0 || currCity >= n || visited[currCity])
+			return false;
+
+		if (adj[currCity][0] < 0 || adj[currCity][1] < 0)
+			return false;
+
+		visited[currCity] = 1;
+		newTour[currCity].prev = prevCity;
+		newTour[currCity].rank = rank;
+
+		const int nextCity =
+			prevCity == -1 ? adj[currCity][0] :
+			adj[currCity][0] == prevCity ? adj[currCity][1] :
+			adj[currCity][1] == prevCity ? adj[currCity][0] : -1;
+
+		if (nextCity == -1)
+			return false;
+
+		newTour[currCity].next = nextCity;
+		prevCity = currCity;
+		currCity = nextCity;
+	}
+
+	if (currCity != startCity)
+		return false;
+
+	newTour[startCity].prev = prevCity;
+	_tourInternal.swap(newTour);
+
+	return validateTourInternal(startCity);
+}
+
+void TSPLKH::activateMoveNodes(const LKHMoveState& state)
+{
+	for (int city : state.t)
+		activateNode(city);
 }
