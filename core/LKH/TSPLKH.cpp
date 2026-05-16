@@ -48,7 +48,6 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     //Export the tour to the output format
     _currSolution.path = buildOutputPath(0);
     _currSolution.calculateDist(adjMat);
-
 }
 
 long long TSPLKH::getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const

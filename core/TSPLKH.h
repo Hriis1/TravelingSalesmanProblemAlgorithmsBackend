@@ -91,6 +91,16 @@ private:
         {}
     };
 
+    //State for one sequential LK move chain.
+    struct LKHMoveState
+    {
+        std::vector<int> t;                         //selected LK endpoints: t[0]=t1, t[1]=t2, ...
+        std::vector<std::pair<int, int>> added;     //candidate edges added by the move chain
+        std::vector<std::pair<int, int>> deleted;   //tour edges deleted by the move chain
+        long long gain = 0;                         //current accumulated gain
+        int depth = 0;                              //number of deleted tour edges in the chain
+    };
+
 public:
 
     TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}());
