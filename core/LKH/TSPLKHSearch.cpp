@@ -60,9 +60,11 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 
 bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vector<int>>& adjMat)
 {
+	assert(state.t.size() >= 2);
+
 	int t1 = state.t[0];
 	int t2 = state.t[1];
-	long long gain = state.gain;
+	long long initialGain = state.gain;
 
 	assert(isEdgeInTour(t1, t2));
 
@@ -77,21 +79,58 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 		if (isEdgeInTour(t2, t3))
 			continue;
 
-		const long long gainAfterAdd = gain - adjMat[t2][t3];
+		//Do not add the same candidate edge twice in one LK chain.
+		if (isAddedEdge(state, t2, t3))
+			continue;
+
+		const long long gainAfterAdd = initialGain - adjMat[t2][t3];
 		if (gainAfterAdd <= 0)
 			continue;
+
+		//Record the added edge so deeper LK steps know this branch already uses it.
+		state.recordAddedEdge(t2, t3);
+		state.pushEndpoint(t3);
+		state.gain = gainAfterAdd;
 
 		const int t4 = forward ? _tourInternal[t3].prev : _tourInternal[t3].next;
 
 		//All four endpoints must be distinct for this 2-opt close.
 		if (t3 == t1 || t3 == t2 || t4 == t1 || t4 == t2)
+		{
+			//Undo the added edge before trying the next candidate.
+			state.gain = initialGain;
+			state.popEndpoint();
+			state.undoAddedEdge();
 			continue;
+		}
 
-		const long long totalGain =
-			gainAfterAdd + adjMat[t3][t4] - adjMat[t4][t1];
+		//Do not delete the same tour edge twice in one LK chain.
+		if (isDeletedEdge(state, t3, t4))
+		{
+			//Undo the added edge before trying the next candidate.
+			state.gain = initialGain;
+			state.popEndpoint();
+			state.undoAddedEdge();
+			continue;
+		}
+
+		//Record the deleted tour edge so the branch now represents t1,t2,t3,t4.
+		state.recordDeletedEdge(t3, t4);
+		state.pushEndpoint(t4);
+		state.gain += adjMat[t3][t4];
+
+		const long long totalGain = state.gain - adjMat[t4][t1];
 
 		if (totalGain <= 0)
+		{
+			//Undo this branch before trying the next candidate.
+			state.gain = initialGain;
+			state.popEndpoint();
+			state.undoDeletedEdge();
+			state.popEndpoint();
+			state.undoAddedEdge();
 			continue;
+		}
 
 		if (forward)
 			applyTwoOptMove(t1, t2, t3, t4);
