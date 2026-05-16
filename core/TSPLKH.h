@@ -99,6 +99,7 @@ private:
         std::vector<std::pair<int, int>> deleted;   //tour edges deleted by the move chain
         long long gain = 0;                         //current accumulated gain
         int depth = 0;                              //number of deleted tour edges in the chain
+        int backtrackingCount = 0;                  //how many times this move backtracked
 
         void reset()
         {
@@ -107,6 +108,7 @@ private:
             deleted.clear();
             gain = 0;
             depth = 0;
+            backtrackingCount = 0;
         }
 
         void recordAddedEdge(int t1, int t2)
