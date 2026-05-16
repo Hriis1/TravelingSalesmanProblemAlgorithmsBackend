@@ -41,6 +41,14 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
 
     //Build the initial tour using the internal representation using NN
     buildInitialTourNN(adjMat, 0);
+
+    //Run the k-opt search (k-opt not implemented yet)
+    runLinKernighanSearch(adjMat);
+
+    //Export the tour to the output format
+    _currSolution.path = buildOutputPath(0);
+    _currSolution.calculateDist(adjMat);
+
 }
 
 long long TSPLKH::getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const
