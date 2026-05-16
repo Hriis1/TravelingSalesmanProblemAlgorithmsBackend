@@ -8,6 +8,7 @@
 
 #include "../core/TSPGeneticAlgo.h"
 #include "../core/TSPMMAS.h"
+#include "../core/TSPLKH.h"
 #include "../core/TSPUtils.h"
 #include "../core/TSPLibParser.h"
 
@@ -235,5 +236,15 @@ int testMMASInstance(const std::string& instance, int nIters, double alpha, doub
 
 	//Solve and display results
 	return testTSPAlgoInstance(instance, &tsp, "MMAS");
+}
+
+int testLKHInstance(const std::string& instance)
+{
+	//Init solver
+	LKHConfig config;
+	TSPLKH tsp = TSPLKH(config);
+
+	//Solve and display results
+	return testTSPAlgoInstance(instance, &tsp, "LKH");
 }
 
