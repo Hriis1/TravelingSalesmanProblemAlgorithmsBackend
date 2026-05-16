@@ -129,9 +129,8 @@ int testTSPAlgoRand(int nCities, int planeSize, int nRuns, bool doBruteForce, TS
 	return 1;
 }
 
-int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, const std::string& algoName)
+int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, const std::string& algoName, int nRuns)
 {
-	const int nRuns = 10;
 	try
 	{
 		//Init the instance
@@ -211,13 +210,13 @@ int testGeneticAlgoRand(int nCities, int planeSize, int nRuns, int ng, int npop,
 	return testTSPAlgoRand(nCities, planeSize, nRuns, doBruteForce, &tsp, "Genetic algorithm");
 }
 
-int testGeneticInstance(const std::string& instance, int ng, int npop, float pc, float pm, int nnoimpr, bool initWithNN)
+int testGeneticInstance(const std::string& instance, int ng, int npop, float pc, float pm, int nnoimpr, bool initWithNN, int nRuns)
 {
 	//Init solver
 	TSPGeneticAlgo tsp = TSPGeneticAlgo(ng, npop, nnoimpr, pc, pm, initWithNN);
 
 	//Solve and display results
-	return testTSPAlgoInstance(instance, &tsp, "Genetic algorithm");
+	return testTSPAlgoInstance(instance, &tsp, "Genetic algorithm", nRuns);
 }
 
 int testMMASRand(int nCities, int planeSize, int nRuns, int nIters, double alpha, double beta, double rho, int nnoimpr, bool doBruteForce)
@@ -229,22 +228,22 @@ int testMMASRand(int nCities, int planeSize, int nRuns, int nIters, double alpha
 	return testTSPAlgoRand(nCities, planeSize, nRuns, doBruteForce, &tsp, "MMAS");
 }
 
-int testMMASInstance(const std::string& instance, int nIters, double alpha, double beta, double rho, int nnoimpr) 
+int testMMASInstance(const std::string& instance, int nIters, double alpha, double beta, double rho, int nnoimpr, int nRuns)
 {
 	//Init solver
 	TSPMMAS tsp = TSPMMAS(nIters, alpha, beta, rho, nnoimpr);
 
 	//Solve and display results
-	return testTSPAlgoInstance(instance, &tsp, "MMAS");
+	return testTSPAlgoInstance(instance, &tsp, "MMAS", nRuns);
 }
 
-int testLKHInstance(const std::string& instance)
+int testLKHInstance(const std::string& instance, int nRuns)
 {
 	//Init solver
 	LKHConfig config;
 	TSPLKH tsp = TSPLKH(config);
 
 	//Solve and display results
-	return testTSPAlgoInstance(instance, &tsp, "LKH");
+	return testTSPAlgoInstance(instance, &tsp, "LKH", nRuns);
 }
 
