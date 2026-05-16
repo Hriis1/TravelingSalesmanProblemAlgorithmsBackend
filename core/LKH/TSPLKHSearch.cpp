@@ -47,15 +47,23 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 		//deleted edge is (t1, t2).
 		const long long gainFromDeletedEdge = adjMat[t1][t2];
 
-		if (trySequentialMove(t1, t2, gainFromDeletedEdge, adjMat))
+		//Init the LKHMoveState
+		LKHMoveState moveState;
+		initializeMoveState(moveState, t1, t2, gainFromDeletedEdge);
+
+		if (trySequentialMove(moveState, adjMat))
 			return true;
 	}
 
 	return false;
 }
 
-bool TSPLKH::trySequentialMove(int t1, int t2, long long gain, const std::vector<std::vector<int>>& adjMat)
+bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vector<int>>& adjMat)
 {
+	int t1 = state.t[0];
+	int t2 = state.t[1];
+	long long gain = state.gain;
+
 	assert(isEdgeInTour(t1, t2));
 
 	//is the edge a forward or backward move

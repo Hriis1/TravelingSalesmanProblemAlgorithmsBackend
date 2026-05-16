@@ -114,15 +114,35 @@ private:
             added.emplace_back(t1, t2);
         }
 
+        void undoAddedEdge()
+        {
+            assert(!added.empty());
+            added.pop_back();
+        }
+
         void recordDeletedEdge(int t1, int t2)
         {
             deleted.emplace_back(t1, t2);
             depth++;
         }
 
+        void undoDeletedEdge()
+        {
+            assert(!deleted.empty());
+            assert(depth > 0);
+            deleted.pop_back();
+            depth--;
+        }
+
         void pushEndpoint(int city)
         {
             t.push_back(city);
+        }
+
+        void popEndpoint()
+        {
+            assert(!t.empty());
+            t.pop_back();
         }
     };
 
@@ -214,7 +234,7 @@ private:
 
     bool tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adjMat); //This tries to find an improving LK move that starts from city t1
 
-    bool trySequentialMove(int t1, int t2, long long gain, const std::vector<std::vector<int>>& adjMat);
+    bool trySequentialMove(LKHMoveState& state, const std::vector<std::vector<int>>& adjMat);
 
     void runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat);
 
