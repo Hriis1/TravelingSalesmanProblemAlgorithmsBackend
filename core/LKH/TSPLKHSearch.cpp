@@ -117,3 +117,42 @@ void TSPLKH::runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat)
 		tryImproveFromNode(t1, adjMat);
 	}
 }
+
+bool TSPLKH::isAddedEdge(const LKHMoveState& state, int a, int b) const
+{
+	for (size_t i = 0; i < state.added.size(); i++)
+	{
+		//check both (a, b) edge and (b, a) edge
+		if (state.added[i].first == a && state.added[i].second == b)
+			return true;
+
+		if (state.added[i].second == a && state.added[i].first == b)
+			return true;
+	}
+
+	return false;
+}
+
+bool TSPLKH::isDeletedEdge(const LKHMoveState& state, int a, int b) const
+{
+	for (size_t i = 0; i < state.deleted.size(); i++)
+	{
+		//check both (a, b) edge and (b, a) edge
+		if (state.deleted[i].first == a && state.deleted[i].second == b)
+			return true;
+
+		if (state.deleted[i].second == a && state.deleted[i].first == b)
+			return true;
+	}
+
+	return false;
+}
+
+void TSPLKH::initializeMoveState(LKHMoveState& state, int t1, int t2, long long initialGain)
+{
+	state.reset();
+	state.pushEndpoint(t1);
+	state.pushEndpoint(t2);
+	state.recordDeletedEdge(t1, t2);
+	state.gain += initialGain;
+}

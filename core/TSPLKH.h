@@ -99,6 +99,31 @@ private:
         std::vector<std::pair<int, int>> deleted;   //tour edges deleted by the move chain
         long long gain = 0;                         //current accumulated gain
         int depth = 0;                              //number of deleted tour edges in the chain
+
+        void reset()
+        {
+            t.clear();
+            added.clear();
+            deleted.clear();
+            gain = 0;
+            depth = 0;
+        }
+
+        void recordAddedEdge(int t1, int t2)
+        {
+            added.emplace_back(t1, t2);
+        }
+
+        void recordDeletedEdge(int t1, int t2)
+        {
+            deleted.emplace_back(t1, t2);
+            depth++;
+        }
+
+        void pushEndpoint(int city)
+        {
+            t.push_back(city);
+        }
     };
 
 public:
@@ -192,6 +217,11 @@ private:
     bool trySequentialMove(int t1, int t2, long long gain, const std::vector<std::vector<int>>& adjMat);
 
     void runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat);
+
+    bool isAddedEdge(const LKHMoveState& state, int a, int b) const; //checks weather an edge has been added in the current Search
+    bool isDeletedEdge(const LKHMoveState& state, int a, int b) const; //checks weather an edge has been deleted in the current Search
+
+    void initializeMoveState(LKHMoveState& state, int t1, int t2, long long initialGain); //It prepares the move chain after choosing the first deleted edge (t1, t2)
 
 private:
     LKHConfig _config;                  //config data for solver
