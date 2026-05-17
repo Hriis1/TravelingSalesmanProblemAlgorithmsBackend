@@ -247,6 +247,8 @@ private:
 
     bool validateTourSegments(int startCity = 0) const;
 
+    bool validateTourStructure(int startCity = 0) const;
+
     void rebuildSegmentIndexes();
 
     std::vector<int> getSegmentCitiesInTourOrder(const LKHTourSegment& segment) const;

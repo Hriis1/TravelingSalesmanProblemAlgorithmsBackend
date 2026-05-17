@@ -397,6 +397,59 @@ bool TSPLKH::validateTourSegments(int startCity) const
     return true;
 }
 
+bool TSPLKH::validateTourStructure(int startCity) const
+{
+    const int n = (int)_tourInternal.size();
+    if (n < 3)
+        return false;
+
+    if (startCity < 0 || startCity >= n)
+        return false;
+
+    //First validate the raw segment containers and city lookup tables.
+    if (!validateTourSegments(startCity))
+        return false;
+
+    std::vector<char> seenCity(n, 0);
+    int currCity = startCity;
+
+    //Walk the tour using the segment-aware next/prev helpers.
+    for (int step = 0; step < n; step++)
+    {
+        if (currCity < 0 || currCity >= n)
+            return false;
+
+        if (seenCity[currCity])
+            return false;
+
+        seenCity[currCity] = 1;
+
+        const int nextCity = getNextInTour(currCity);
+        const int prevCity = getPrevInTour(currCity);
+
+        //Next and previous links must agree with each other.
+        if (getPrevInTour(nextCity) != currCity)
+            return false;
+
+        if (getNextInTour(prevCity) != currCity)
+            return false;
+
+        currCity = nextCity;
+    }
+
+    //After visiting n unique cities, the next step must close the cycle.
+    if (currCity != startCity)
+        return false;
+
+    for (int city = 0; city < n; city++)
+    {
+        if (!seenCity[city])
+            return false;
+    }
+
+    return true;
+}
+
 void TSPLKH::rebuildSegmentIndexes()
 {
     const int n = (int)_tourInternal.size();
@@ -554,7 +607,7 @@ void TSPLKH::flipTourPath(int firstCity, int lastCity)
     //Only segment metadata is updated here. Materialization is done by the caller if needed.
     rebuildSegmentIndexes();
 
-    assert(validateTourSegments(0));
+    assert(validateTourStructure(0));
 }
 
 void TSPLKH::applyTwoOptMove(int t1, int t2, int t3, int t4)
@@ -570,5 +623,6 @@ void TSPLKH::applyTwoOptMove(int t1, int t2, int t3, int t4)
     //Materialize once so older code that still reads _tourInternal remains correct.
     rebuildTourInternalFromSegments();
 
+    assert(validateTourStructure(0));
     assert(validateTourInternal(0));
 }
