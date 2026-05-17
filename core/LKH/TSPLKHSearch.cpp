@@ -34,7 +34,7 @@ void TSPLKH::activateNode(int city)
 
 bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adjMat)
 {
-	assert(t1 >= 0 && t1 < (int)_tourInternal.size());
+	assert(t1 >= 0 && t1 < (int)_citySegment.size());
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -222,7 +222,7 @@ bool TSPLKH::isEndpointUsed(const LKHMoveState& state, int city) const
 
 bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 {
-	const int n = (int)_tourInternal.size();
+	const int n = (int)_citySegment.size();
 	if (n < 3 || state.added.size() != state.deleted.size())
 		return false;
 

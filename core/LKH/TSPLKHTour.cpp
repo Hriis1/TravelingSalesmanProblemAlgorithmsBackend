@@ -51,7 +51,7 @@ void TSPLKH::addCityToTour(int city, int prev, int rank)
 
 bool TSPLKH::validateTourInternal(int startCity) const
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     if (n < 3)
         return false;
 
@@ -118,7 +118,7 @@ bool TSPLKH::isEdgeInTour(int a, int b) const
 
 int TSPLKH::getPrevInTour(int city) const
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     assert(city >= 0 && city < n);
     assert((int)_citySegment.size() == n);
     assert((int)_cityOffsetInSegment.size() == n);
@@ -145,7 +145,7 @@ int TSPLKH::getPrevInTour(int city) const
 
 int TSPLKH::getNextInTour(int city) const
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     assert(city >= 0 && city < n);
     assert((int)_citySegment.size() == n);
     assert((int)_cityOffsetInSegment.size() == n);
@@ -172,7 +172,7 @@ int TSPLKH::getNextInTour(int city) const
 
 bool TSPLKH::isBetweenInTour(int a, int b, int c) const
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     assert(a >= 0 && a < n);
     assert(b >= 0 && b < n);
     assert(c >= 0 && c < n);
@@ -231,7 +231,7 @@ long long TSPLKH::calculateInternalTourCost(const std::vector<std::vector<int>>&
 
 std::vector<int> TSPLKH::buildOutputPath(int startCity) const
 {
-    int n = _tourInternal.size();
+    int n = (int)_citySegment.size();
     assert(n > 0);
 
     std::vector<int> path(n);
@@ -264,7 +264,7 @@ void TSPLKH::refreshTourRanks(int startCity)
 
 void TSPLKH::rebuildTourSegments(int startCity)
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     assert(n >= 3);
     assert(validateTourInternal(startCity));
 
@@ -319,7 +319,7 @@ void TSPLKH::rebuildTourSegments(int startCity)
 
 bool TSPLKH::validateTourSegments(int startCity) const
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     if (n < 3)
         return false;
 
@@ -394,7 +394,7 @@ bool TSPLKH::validateTourSegments(int startCity) const
 
 bool TSPLKH::validateTourStructure(int startCity) const
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     if (n < 3)
         return false;
 
@@ -487,7 +487,7 @@ void TSPLKH::rebuildTourSegmentsFromPath(const std::vector<int>& path)
 
 void TSPLKH::rebuildSegmentIndexes()
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     const int segmentCount = (int)_tourSegments.size();
 
     _citySegment.assign(n, -1);
@@ -588,7 +588,7 @@ void TSPLKH::rotateTourSegmentsToFront(int segmentIndex)
 
 void TSPLKH::rebuildTourInternalFromSegments()
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     std::vector<int> tourOrder;
     tourOrder.reserve(n);
 
@@ -613,7 +613,7 @@ void TSPLKH::rebuildTourInternalFromSegments()
 
 void TSPLKH::flipTourPath(int firstCity, int lastCity)
 {
-    const int n = (int)_tourInternal.size();
+    const int n = (int)_citySegment.size();
     assert(firstCity >= 0 && firstCity < n);
     assert(lastCity >= 0 && lastCity < n);
     assert(validateTourInternal(0));
