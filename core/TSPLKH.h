@@ -231,6 +231,8 @@ private:
 
     bool isEdgeInTour(int a, int b) const;
 
+    bool isBetweenInTour(int a, int b, int c) const; //Starting from city a and walking forward in the tour, do we reach b before we reach c?
+
     long long calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity = 0) const;
 
     std::vector<int> buildOutputPath(int startCity = 0) const;  //builds the path using std::vector<int>

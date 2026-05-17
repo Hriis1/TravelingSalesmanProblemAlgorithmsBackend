@@ -120,6 +120,48 @@ bool TSPLKH::isEdgeInTour(int a, int b) const
     return _tourInternal[a].prev == b || _tourInternal[a].next == b;
 }
 
+bool TSPLKH::isBetweenInTour(int a, int b, int c) const
+{
+    const int n = (int)_tourInternal.size();
+    assert(a >= 0 && a < n);
+    assert(b >= 0 && b < n);
+    assert(c >= 0 && c < n);
+    assert((int)_citySegment.size() == n);
+    assert((int)_cityOffsetInSegment.size() == n);
+
+    //Strict between: endpoints themselves are not considered between.
+    if (a == b || b == c || a == c)
+        return false;
+
+    auto tourPosition = [&](int city) -> std::pair<int, int>
+    {
+        const int segmentIndex = _citySegment[city];
+        const int offset = _cityOffsetInSegment[city];
+
+        assert(segmentIndex >= 0 && segmentIndex < (int)_tourSegments.size());
+        assert(offset >= 0 && offset < (int)_tourSegments[segmentIndex].cities.size());
+
+        const auto& segment = _tourSegments[segmentIndex];
+
+        //If a segment is lazily reversed later, logical order is opposite.
+        const int logicalOffset =
+            segment.reversed ? (int)segment.cities.size() - 1 - offset : offset;
+
+        return { segment.rank, logicalOffset };
+    };
+
+    const auto posA = tourPosition(a);
+    const auto posB = tourPosition(b);
+    const auto posC = tourPosition(c);
+
+    //If a comes before c in linear tour order, b must be inside that interval.
+    if (posA < posC)
+        return posA < posB && posB < posC;
+
+    //Otherwise the interval wraps around the end of the tour.
+    return posA < posB || posB < posC;
+}
+
 long long TSPLKH::calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity) const
 {
     long long dist = 0;
