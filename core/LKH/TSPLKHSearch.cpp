@@ -334,9 +334,6 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 	//Make the segment tour the primary accepted representation.
 	rebuildTourSegmentsFromPath(newPath);
 
-	
-	rebuildTourInternalFromSegments(); //Temporary cache until _tourInternal is fully phased out.
-
 	return validateTourStructure(0);
 }
 

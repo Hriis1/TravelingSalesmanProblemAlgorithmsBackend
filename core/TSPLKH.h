@@ -80,19 +80,6 @@ private:
         {}
     };
 
-    //Internal representation of a city in the tour
-    struct LKHTourNode
-    {
-        int prev = -1;                  //the previous city in the tour
-        int next = -1;                  //the next city in the tour
-        int rank = -1;                  //the position of the city in the tour
-
-        LKHTourNode() = default;
-        LKHTourNode(int prev, int next, int rank)
-            : prev(prev), next(next), rank(rank)
-        {}
-    };
-
     //One block in the two-level tour representation.
     struct LKHTourSegment
     {
@@ -225,10 +212,6 @@ private:
     //Tour manipulation funcs
     void buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity = 0);
 
-    void addCityToTour(int city, int prev, int rank);
-
-    bool validateTourInternal(int startCity = 0) const;
-
     bool isEdgeInTour(int a, int b) const;
 
     int getPrevInTour(int city) const;
@@ -240,10 +223,6 @@ private:
     long long calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity = 0) const;
 
     std::vector<int> buildOutputPath(int startCity = 0) const;  //builds the path using std::vector<int>
-
-    void refreshTourRanks(int startCity = 0);
-
-    void rebuildTourSegments(int startCity = 0);
 
     bool validateTourSegments(int startCity = 0) const;
 
@@ -260,8 +239,6 @@ private:
     void splitSegmentAfterCity(int city);
 
     void rotateTourSegmentsToFront(int segmentIndex);
-
-    void rebuildTourInternalFromSegments();
 
     void flipTourPath(int firstCity, int lastCity); //reverses the current forward tour path from firstCity to lastCity
 
@@ -312,12 +289,9 @@ private:
 
     std::vector<std::vector<LKHCandidate>> _candidates; //candidate next cities for each city by alpha nearness
 
-    std::vector<LKHTourNode> _tourInternal;             //Internal tour representation  
-
+    //Segmented tour representation
     std::vector<LKHTourSegment> _tourSegments;          //Tour split into ordered segments
-
     std::vector<int> _citySegment;                      //Segment index for each city
-
     std::vector<int> _cityOffsetInSegment;              //Offset of each city inside its segment
 
     //k-opt search

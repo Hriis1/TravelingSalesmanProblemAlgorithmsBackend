@@ -39,76 +39,6 @@ void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int
 
     //Build segment metadata for the two-level tour representation.
     rebuildTourSegmentsFromPath(nnPath);
-
-    rebuildTourInternalFromSegments(); // temporary cache until _tourInternal is fully phased out
-}
-
-void TSPLKH::addCityToTour(int city, int prev, int rank)
-{
-    _tourInternal[city].prev = prev;
-    _tourInternal[city].rank = rank;
-}
-
-bool TSPLKH::validateTourInternal(int startCity) const
-{
-    const int n = (int)_citySegment.size();
-    if (n < 3)
-        return false;
-
-    if (startCity < 0 || startCity >= n)
-        return false;
-
-    std::vector<char> seenCity(n, 0);
-    std::vector<char> seenRank(n, 0);
-
-    int curr = startCity;
-    for (int step = 0; step < n; step++)
-    {
-        if (curr < 0 || curr >= n)
-            return false;
-
-        if (seenCity[curr])
-            return false;
-
-        seenCity[curr] = 1;
-
-        const auto& node = _tourInternal[curr];
-        if (node.prev < 0 || node.prev >= n)
-            return false;
-
-        if (node.next < 0 || node.next >= n)
-            return false;
-
-        if (node.rank < 0 || node.rank >= n)
-            return false;
-
-        if (seenRank[node.rank])
-            return false;
-
-        seenRank[node.rank] = 1;
-
-        if (_tourInternal[node.next].prev != curr)
-            return false;
-
-        if (_tourInternal[node.prev].next != curr)
-            return false;
-
-        curr = node.next;
-    }
-
-    if (curr != startCity)
-        return false;
-
-    for (int i = 0; i < n; i++)
-    {
-        if (!seenCity[i])
-            return false;
-
-        if (!seenRank[i])
-            return false;
-    }
-
-    return true;
 }
 
 bool TSPLKH::isEdgeInTour(int a, int b) const
@@ -248,73 +178,6 @@ std::vector<int> TSPLKH::buildOutputPath(int startCity) const
     }
 
     return path;
-}
-
-void TSPLKH::refreshTourRanks(int startCity)
-{
-    int currCity = startCity;
-    int rank = 0;
-
-    do
-    {
-        _tourInternal[currCity].rank = rank++;
-        currCity = getNextInTour(currCity);
-    } while (currCity != startCity);
-}
-
-void TSPLKH::rebuildTourSegments(int startCity)
-{
-    const int n = (int)_citySegment.size();
-    assert(n >= 3);
-    assert(validateTourInternal(startCity));
-
-    //Use about sqrt(n) cities per segment unless the config overrides it.
-    const int targetSegmentSize =
-        _config.tourSegmentSize > 0 ? _config.tourSegmentSize : std::max(1, (int)std::sqrt((double)n));
-
-    //Rebuild all segment data from the current linked tour.
-    _tourSegments.clear();
-    _citySegment.assign(n, -1);
-    _cityOffsetInSegment.assign(n, -1);
-
-    int currCity = startCity;
-    int visited = 0;
-
-    //Walk the tour once and split consecutive cities into fixed-size blocks.
-    while (visited < n)
-    {
-        LKHTourSegment segment;
-        segment.rank = (int)_tourSegments.size();
-        segment.reversed = false;
-        segment.cities.reserve(targetSegmentSize);
-
-        //Fill one segment with consecutive cities in current tour order.
-        while (visited < n && (int)segment.cities.size() < targetSegmentSize)
-        {
-            const int offset = (int)segment.cities.size();
-            segment.cities.push_back(currCity);
-
-            //Remember where each city lives so later order queries are O(1).
-            _citySegment[currCity] = segment.rank;
-            _cityOffsetInSegment[currCity] = offset;
-
-            currCity = _tourInternal[currCity].next;
-            visited++;
-        }
-
-        _tourSegments.push_back(segment);
-    }
-
-    const int segmentCount = (int)_tourSegments.size();
-
-    //Link the segments themselves into a circular list.
-    for (int i = 0; i < segmentCount; i++)
-    {
-        _tourSegments[i].prev = (i == 0 ? segmentCount - 1 : i - 1);
-        _tourSegments[i].next = (i + 1 == segmentCount ? 0 : i + 1);
-    }
-
-    assert(validateTourSegments(startCity));
 }
 
 bool TSPLKH::validateTourSegments(int startCity) const
@@ -586,37 +449,11 @@ void TSPLKH::rotateTourSegmentsToFront(int segmentIndex)
     rebuildSegmentIndexes();
 }
 
-void TSPLKH::rebuildTourInternalFromSegments()
-{
-    const int n = (int)_citySegment.size();
-    std::vector<int> tourOrder;
-    tourOrder.reserve(n);
-
-    //Materialize the logical segment order back into one city order.
-    //This keeps older code that reads _tourInternal.prev/next correct.
-    for (const auto& segment : _tourSegments)
-    {
-        const auto cities = getSegmentCitiesInTourOrder(segment);
-        tourOrder.insert(tourOrder.end(), cities.begin(), cities.end());
-    }
-
-    assert((int)tourOrder.size() == n);
-
-    for (int rank = 0; rank < n; rank++)
-    {
-        const int city = tourOrder[rank];
-        _tourInternal[city].prev = tourOrder[rank == 0 ? n - 1 : rank - 1];
-        _tourInternal[city].next = tourOrder[rank + 1 == n ? 0 : rank + 1];
-        _tourInternal[city].rank = rank;
-    }
-}
-
 void TSPLKH::flipTourPath(int firstCity, int lastCity)
 {
     const int n = (int)_citySegment.size();
     assert(firstCity >= 0 && firstCity < n);
     assert(lastCity >= 0 && lastCity < n);
-    assert(validateTourInternal(0));
 
     if (firstCity == lastCity)
         return;
@@ -655,9 +492,5 @@ void TSPLKH::applyTwoOptMove(int t1, int t2, int t3, int t4)
     //t1 -> t4 and t2 -> t3.
     flipTourPath(t2, t4);
 
-    //Materialize once so older code that still reads _tourInternal remains correct.
-    rebuildTourInternalFromSegments();
-
     assert(validateTourStructure(0));
-    assert(validateTourInternal(0));
 }

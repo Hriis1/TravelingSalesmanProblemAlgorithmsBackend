@@ -20,8 +20,6 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     _bestPis.assign(n, 0);
     _candidates.clear();
     _candidates.resize(n);
-    _tourInternal.clear();
-    _tourInternal.resize(n);
     _tourSegments.clear();
     _citySegment.assign(n, -1);
     _cityOffsetInSegment.assign(n, -1);
