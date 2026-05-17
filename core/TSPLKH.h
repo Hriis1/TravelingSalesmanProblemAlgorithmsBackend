@@ -14,9 +14,9 @@ struct LKHConfig
     // ASIGNED VALUES ARE JUST DEFAULTS
 
     int maxTrials = 50;                 //How many attempts LKH makes
-    int maxCandidates = 15;             //How many candidate edges each city considers
+    int maxCandidates = 5;             //How many candidate edges each city considers
     int maxDepth = 5;                   //Maximum depth of the variable k-opt search
-    int backtrackingLimit = 20;         //Limits how many failed alternatives are explored.
+    int backtrackingLimit = 0;          //Limits how many failed alternatives are explored. 0 -> no limit
     int runs = 1;                       //How many independent full runs to do
     int kickStrength = 4;               //How strong the perturbation is when stuck
 
@@ -253,7 +253,10 @@ private:
 
     bool tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adjMat); //This tries to find an improving LK move that starts from city t1
 
-    bool trySequentialMove(LKHMoveState& state, const std::vector<std::vector<int>>& adjMat);
+    bool findBestSequentialMove(
+        LKHMoveState& state,
+        std::vector<LKHMoveState>& improvingMoves,
+        const std::vector<std::vector<int>>& adjMat);
 
     void runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat);
 

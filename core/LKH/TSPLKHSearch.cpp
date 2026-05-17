@@ -1,4 +1,5 @@
 #include "../TSPLKH.h"
+#include <algorithm>
 
 void TSPLKH::activateAllNodes(int nCities)
 {
@@ -36,6 +37,8 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 {
 	assert(t1 >= 0 && t1 < (int)_citySegment.size());
 
+	std::vector<LKHMoveState> improvingMoves;
+
 	for (int i = 0; i < 2; i++)
 	{
 		//try edge with prev city and next city
@@ -51,14 +54,38 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 		LKHMoveState moveState;
 		initializeMoveState(moveState, t1, t2, gainFromDeletedEdge);
 
-		if (trySequentialMove(moveState, adjMat))
-			return true;
+		//Search all allowed branches from this first deleted edge and save improving closes.
+		findBestSequentialMove(moveState, improvingMoves, adjMat);
+	}
+
+	if (improvingMoves.empty())
+		return false;
+
+	//Try the highest-gain moves first; some positive closes can still form invalid subtours.
+	std::sort(
+		improvingMoves.begin(),
+		improvingMoves.end(),
+		[](const LKHMoveState& a, const LKHMoveState& b)
+		{
+			return a.gain > b.gain;
+		});
+
+	for (const auto& move : improvingMoves)
+	{
+		if (!tryApplyKOptMove(move))
+			continue;
+
+		activateMoveNodes(move);
+		return true;
 	}
 
 	return false;
 }
 
-bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vector<int>>& adjMat)
+bool TSPLKH::findBestSequentialMove(
+	LKHMoveState& state,
+	std::vector<LKHMoveState>& improvingMoves,
+	const std::vector<std::vector<int>>& adjMat)
 {
 	assert(state.t.size() >= 2);
 
@@ -68,6 +95,8 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 
 	if (_config.backtrackingLimit > 0 && state.backtrackingCount >= _config.backtrackingLimit)
 		return false;
+
+	bool foundImprovement = !improvingMoves.empty();
 
 	for (const auto& candidate : _candidates[t2]) //for each of the candidate next eges of t2
 	{
@@ -113,23 +142,24 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 				const long long totalGain = state.gain - adjMat[t4][t1];
 				if (totalGain > 0)
 				{
+					//Temporarily record the closing edge so this state is a complete k-opt move.
 					state.recordAddedEdge(t4, t1);
 					state.gain = totalGain;
 
-					if (tryApplyKOptMove(state))
-					{
-						activateMoveNodes(state);
-						return true;
-					}
+					//Save the complete move, but do not apply it during recursive search.
+					improvingMoves.push_back(state);
+					foundImprovement = true;
 
+					//Undo the closing edge before continuing this branch deeper.
 					state.gain = gainBeforeClose;
 					state.undoAddedEdge();
 				}
 			}
 
-			//If closing did not work, continue the sequential LK chain deeper.
-			if (state.depth < _config.maxDepth && trySequentialMove(state, adjMat))
-				return true;
+			//Continue the sequential LK chain deeper to look for an even better close.
+			if (state.depth < _config.maxDepth)
+				foundImprovement =
+					findBestSequentialMove(state, improvingMoves, adjMat) || foundImprovement;
 
 			//This branch failed, so undo the last deleted edge before trying the next one.
 			state.backtrackingCount++;
@@ -150,7 +180,7 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 			return false;
 	}
 
-	return false;
+	return foundImprovement;
 }
 
 void TSPLKH::runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat)
