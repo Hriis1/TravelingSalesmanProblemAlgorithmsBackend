@@ -22,6 +22,9 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     _candidates.resize(n);
     _tourInternal.clear();
     _tourInternal.resize(n);
+    _tourSegments.clear();
+    _citySegment.assign(n, -1);
+    _cityOffsetInSegment.assign(n, -1);
     for (int i = 0; i < n; i++)
     {
         _nodes[i].id = i;
@@ -42,7 +45,7 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     //Build the initial tour using the internal representation using NN
     buildInitialTourNN(adjMat, 0);
 
-    //Run the k-opt search (k-opt not implemented yet)
+    //Run the variable-depth k-opt search.
     runLinKernighanSearch(adjMat);
 
     //Export the tour to the output format

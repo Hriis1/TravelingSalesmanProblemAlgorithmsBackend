@@ -17,7 +17,7 @@ int main()
 	//testMMASInstance("brg180.tsp", 500, 2, 3, 0.1, 100, 10);
 
 	//Run LKH
-	testLKHInstance("d657.tsp", 3);
+	testLKHInstance("fl417.tsp", 1);
 
 
 	std::cin.get();

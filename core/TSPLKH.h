@@ -20,6 +20,8 @@ struct LKHConfig
     int runs = 1;                       //How many independent full runs to do
     int kickStrength = 4;               //How strong the perturbation is when stuck
 
+    int tourSegmentSize = -1;           //Target cities per tour segment. -1 means sqrt(n)
+
     int initialPeriod = -1;             // LKH default: max(n / 2, 100)
     int initialStepSize = 1;            // LKH default: 1
 
@@ -89,6 +91,16 @@ private:
         LKHTourNode(int prev, int next, int rank)
             : prev(prev), next(next), rank(rank)
         {}
+    };
+
+    //One block in the two-level tour representation.
+    struct LKHTourSegment
+    {
+        std::vector<int> cities;         //cities stored contiguously in tour order
+        int prev = -1;                   //previous segment in tour order
+        int next = -1;                   //next segment in tour order
+        int rank = -1;                   //position of this segment among all segments
+        bool reversed = false;           //lazy direction flag for later segment flips
     };
 
     //State for one sequential LK move chain.
@@ -225,6 +237,10 @@ private:
 
     void refreshTourRanks(int startCity = 0);
 
+    void rebuildTourSegments(int startCity = 0);
+
+    bool validateTourSegments(int startCity = 0) const;
+
     void applyTwoOptMove(int t1, int t2, int t3, int t4);
 
     //k-opt search
@@ -273,6 +289,12 @@ private:
     std::vector<std::vector<LKHCandidate>> _candidates; //candidate next cities for each city by alpha nearness
 
     std::vector<LKHTourNode> _tourInternal;             //Internal tour representation  
+
+    std::vector<LKHTourSegment> _tourSegments;          //Tour split into ordered segments
+
+    std::vector<int> _citySegment;                      //Segment index for each city
+
+    std::vector<int> _cityOffsetInSegment;              //Offset of each city inside its segment
 
     //k-opt search
     std::deque<int> _activeNodes;       //cities that still need to be tried                      

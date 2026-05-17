@@ -324,8 +324,10 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 
 	newTour[startCity].prev = prevCity;
 	_tourInternal.swap(newTour);
+	refreshTourRanks(0);
+	rebuildTourSegments(0);
 
-	return validateTourInternal(startCity);
+	return validateTourInternal(0);
 }
 
 void TSPLKH::activateMoveNodes(const LKHMoveState& state)
