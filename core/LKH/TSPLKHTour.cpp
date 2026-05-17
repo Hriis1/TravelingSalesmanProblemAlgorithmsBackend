@@ -4,12 +4,13 @@
 void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity)
 {
     int n = adjMat.size();
+    std::vector<char> visited(n, 0);
+    std::vector<int> nnPath(n);
 
     //Add start city
-    std::vector<char> visited(n, 0);
-    visited[startCity] = 1;
-    addCityToTour(startCity, -1, 0);
     int currCity = startCity;
+    visited[currCity] = 1;
+    nnPath[0] = currCity;
 
     //Choose next city
     for (int step = 1; step < n; ++step)
@@ -32,20 +33,14 @@ void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int
 
         //Add next city and hook it to curr city
         visited[nextCity] = 1;
-        addCityToTour(nextCity, currCity, step);
-        _tourInternal[currCity].next = nextCity;
+        nnPath[step] = nextCity;
         currCity = nextCity;
     }
 
-    //Finish the cycle
-    _tourInternal[currCity].next = startCity;
-    _tourInternal[startCity].prev = currCity;
-
-    //Validate the initial tour
-    assert(validateTourInternal(startCity));
-
     //Build segment metadata for the two-level tour representation.
-    rebuildTourSegments(startCity);
+    rebuildTourSegmentsFromPath(nnPath);
+
+    rebuildTourInternalFromSegments(); // temporary cache until _tourInternal is fully phased out
 }
 
 void TSPLKH::addCityToTour(int city, int prev, int rank)
@@ -448,6 +443,46 @@ bool TSPLKH::validateTourStructure(int startCity) const
     }
 
     return true;
+}
+
+void TSPLKH::rebuildTourSegmentsFromPath(const std::vector<int>& path)
+{
+    const int n = (int)path.size();
+    assert(n >= 3);
+
+    //Use about sqrt(n) cities per segment unless the config overrides it.
+    const int targetSegmentSize =
+        _config.tourSegmentSize > 0 ? _config.tourSegmentSize : std::max(1, (int)std::sqrt((double)n));
+
+    std::vector<char> seenCity(n, 0);
+
+    _tourSegments.clear();
+
+    for (int pathIndex = 0; pathIndex < n;)
+    {
+        LKHTourSegment segment;
+        segment.rank = (int)_tourSegments.size();
+        segment.reversed = false;
+        segment.cities.reserve(targetSegmentSize);
+
+        //Copy one consecutive block from the path into this segment.
+        while (pathIndex < n && (int)segment.cities.size() < targetSegmentSize)
+        {
+            const int city = path[pathIndex++];
+            assert(city >= 0 && city < n);
+            assert(!seenCity[city]);
+
+            seenCity[city] = 1;
+            segment.cities.push_back(city);
+        }
+
+        _tourSegments.push_back(segment);
+    }
+
+    //Rebuild segment links and city -> segment lookup arrays.
+    rebuildSegmentIndexes();
+
+    assert(validateTourSegments(path[0]));
 }
 
 void TSPLKH::rebuildSegmentIndexes()
