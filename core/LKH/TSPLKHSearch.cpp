@@ -226,15 +226,18 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 	if (n < 3 || state.added.size() != state.deleted.size())
 		return false;
 
+	//Build a temporary degree-2 graph from the current segment-based tour.
 	std::vector<std::array<int, 2>> adj(n);
 	for (int city = 0; city < n; city++)
 		adj[city] = { getPrevInTour(city), getNextInTour(city) };
 
 	auto removeEdge = [&](int a, int b) -> bool
 	{
+		//Both endpoints must be valid cities.
 		if (a < 0 || a >= n || b < 0 || b >= n)
 			return false;
 
+		//Remove b from a's two graph neighbors.
 		if (adj[a][0] == b)
 			adj[a][0] = -1;
 		else if (adj[a][1] == b)
@@ -242,6 +245,7 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 		else
 			return false;
 
+		//Remove a from b's two graph neighbors.
 		if (adj[b][0] == a)
 			adj[b][0] = -1;
 		else if (adj[b][1] == a)
@@ -254,15 +258,18 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 
 	auto addEdge = [&](int a, int b) -> bool
 	{
+		//Reject invalid cities and self-edges.
 		if (a < 0 || a >= n || b < 0 || b >= n || a == b)
 			return false;
 
+		//The edge must not already exist in the temporary graph.
 		if (adj[a][0] == b || adj[a][1] == b)
 			return false;
 
 		if (adj[b][0] == a || adj[b][1] == a)
 			return false;
 
+		//Each endpoint must have one free degree slot after deletions.
 		int aSlot = adj[a][0] == -1 ? 0 : (adj[a][1] == -1 ? 1 : -1);
 		int bSlot = adj[b][0] == -1 ? 0 : (adj[b][1] == -1 ? 1 : -1);
 		if (aSlot == -1 || bSlot == -1)
@@ -273,28 +280,31 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 		return true;
 	};
 
-	//Apply the recorded edge exchange to a temporary degree-2 graph.
+	//First delete the tour edges selected by the LK move.
 	for (const auto& edge : state.deleted)
 	{
 		if (!removeEdge(edge.first, edge.second))
 			return false;
 	}
 
+	//Then add the candidate/closing edges selected by the LK move.
 	for (const auto& edge : state.added)
 	{
 		if (!addEdge(edge.first, edge.second))
 			return false;
 	}
 
-	std::vector<LKHTourNode> newTour(n);
+	std::vector<int> newPath;
+	newPath.reserve(n);
+
 	std::vector<char> visited(n, 0);
 
 	const int startCity = state.t[0];
 	int prevCity = -1;
 	int currCity = startCity;
 
-	//Traverse the temporary graph; it is valid only if it forms one Hamiltonian cycle.
-	for (int rank = 0; rank < n; rank++)
+	//Traverse the temporary graph and collect the accepted tour path.
+	for (int step = 0; step < n; step++)
 	{
 		if (currCity < 0 || currCity >= n || visited[currCity])
 			return false;
@@ -303,9 +313,9 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 			return false;
 
 		visited[currCity] = 1;
-		newTour[currCity].prev = prevCity;
-		newTour[currCity].rank = rank;
+		newPath.push_back(currCity);
 
+		//Continue through the neighbor that is not the city we came from.
 		const int nextCity =
 			prevCity == -1 ? adj[currCity][0] :
 			adj[currCity][0] == prevCity ? adj[currCity][1] :
@@ -314,7 +324,6 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 		if (nextCity == -1)
 			return false;
 
-		newTour[currCity].next = nextCity;
 		prevCity = currCity;
 		currCity = nextCity;
 	}
@@ -322,11 +331,13 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 	if (currCity != startCity)
 		return false;
 
-	newTour[startCity].prev = prevCity;
-	_tourInternal.swap(newTour);
-	rebuildTourSegments(0);
+	//Make the segment tour the primary accepted representation.
+	rebuildTourSegmentsFromPath(newPath);
 
-	return validateTourInternal(0);
+	
+	rebuildTourInternalFromSegments(); //Temporary cache until _tourInternal is fully phased out.
+
+	return validateTourStructure(0);
 }
 
 void TSPLKH::activateMoveNodes(const LKHMoveState& state)
