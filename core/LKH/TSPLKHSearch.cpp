@@ -39,7 +39,7 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 	for (int i = 0; i < 2; i++)
 	{
 		//try edge with prev city and next city
-		const int t2 = i == 0 ? _tourInternal[t1].prev : _tourInternal[t1].next;
+		const int t2 = i == 0 ? getPrevInTour(t1) : getNextInTour(t1);
 
 		if (t2 < 0)
 			continue;
@@ -90,7 +90,7 @@ bool TSPLKH::trySequentialMove(LKHMoveState& state, const std::vector<std::vecto
 		state.pushEndpoint(t3);
 		state.gain = gainAfterAdd;
 
-		const int tourNeighbors[2] = { _tourInternal[t3].prev, _tourInternal[t3].next };
+		const int tourNeighbors[2] = { getPrevInTour(t3), getNextInTour(t3) };
 
 		for (int i = 0; i < 2; i++)
 		{
@@ -228,7 +228,7 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 
 	std::vector<std::array<int, 2>> adj(n);
 	for (int city = 0; city < n; city++)
-		adj[city] = { _tourInternal[city].prev, _tourInternal[city].next };
+		adj[city] = { getPrevInTour(city), getNextInTour(city) };
 
 	auto removeEdge = [&](int a, int b) -> bool
 	{
@@ -324,7 +324,6 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 
 	newTour[startCity].prev = prevCity;
 	_tourInternal.swap(newTour);
-	refreshTourRanks(0);
 	rebuildTourSegments(0);
 
 	return validateTourInternal(0);

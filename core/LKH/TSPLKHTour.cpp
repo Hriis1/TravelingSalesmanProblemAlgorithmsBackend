@@ -1,4 +1,5 @@
 #include "../TSPLKH.h"
+#include <algorithm>
 
 void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity)
 {
@@ -117,7 +118,61 @@ bool TSPLKH::validateTourInternal(int startCity) const
 
 bool TSPLKH::isEdgeInTour(int a, int b) const
 {
-    return _tourInternal[a].prev == b || _tourInternal[a].next == b;
+    return getPrevInTour(a) == b || getNextInTour(a) == b;
+}
+
+int TSPLKH::getPrevInTour(int city) const
+{
+    const int n = (int)_tourInternal.size();
+    assert(city >= 0 && city < n);
+    assert((int)_citySegment.size() == n);
+    assert((int)_cityOffsetInSegment.size() == n);
+
+    const int segmentIndex = _citySegment[city];
+    const int offset = _cityOffsetInSegment[city];
+
+    assert(segmentIndex >= 0 && segmentIndex < (int)_tourSegments.size());
+    const auto& segment = _tourSegments[segmentIndex];
+    assert(offset >= 0 && offset < (int)segment.cities.size());
+
+    //Inside a normal segment, previous city is one physical slot left.
+    if (!segment.reversed && offset > 0)
+        return segment.cities[offset - 1];
+
+    //Inside a reversed segment, logical previous city is one physical slot right.
+    if (segment.reversed && offset + 1 < (int)segment.cities.size())
+        return segment.cities[offset + 1];
+
+    //At a segment boundary, previous city is the logical last city of the previous segment.
+    const auto& prevSegment = _tourSegments[segment.prev];
+    return prevSegment.reversed ? prevSegment.cities.front() : prevSegment.cities.back();
+}
+
+int TSPLKH::getNextInTour(int city) const
+{
+    const int n = (int)_tourInternal.size();
+    assert(city >= 0 && city < n);
+    assert((int)_citySegment.size() == n);
+    assert((int)_cityOffsetInSegment.size() == n);
+
+    const int segmentIndex = _citySegment[city];
+    const int offset = _cityOffsetInSegment[city];
+
+    assert(segmentIndex >= 0 && segmentIndex < (int)_tourSegments.size());
+    const auto& segment = _tourSegments[segmentIndex];
+    assert(offset >= 0 && offset < (int)segment.cities.size());
+
+    //Inside a normal segment, next city is one physical slot right.
+    if (!segment.reversed && offset + 1 < (int)segment.cities.size())
+        return segment.cities[offset + 1];
+
+    //Inside a reversed segment, logical next city is one physical slot left.
+    if (segment.reversed && offset > 0)
+        return segment.cities[offset - 1];
+
+    //At a segment boundary, next city is the logical first city of the next segment.
+    const auto& nextSegment = _tourSegments[segment.next];
+    return nextSegment.reversed ? nextSegment.cities.back() : nextSegment.cities.front();
 }
 
 bool TSPLKH::isBetweenInTour(int a, int b, int c) const
@@ -133,6 +188,8 @@ bool TSPLKH::isBetweenInTour(int a, int b, int c) const
     if (a == b || b == c || a == c)
         return false;
 
+    //Convert a city into a comparable logical tour position.
+    //The first value is the segment order, the second is the position inside that segment.
     auto tourPosition = [&](int city) -> std::pair<int, int>
     {
         const int segmentIndex = _citySegment[city];
@@ -169,8 +226,9 @@ long long TSPLKH::calculateInternalTourCost(const std::vector<std::vector<int>>&
 
     do
     {
-        dist += adjMat[currCity][_tourInternal[currCity].next];
-        currCity = _tourInternal[currCity].next;
+        const int nextCity = getNextInTour(currCity);
+        dist += adjMat[currCity][nextCity];
+        currCity = nextCity;
     } while (currCity != startCity);
 
     return dist;
@@ -190,7 +248,7 @@ std::vector<int> TSPLKH::buildOutputPath(int startCity) const
     //add the other cities
     for (size_t i = 1; i < n; i++)
     {
-        currCity = _tourInternal[currCity].next;
+        currCity = getNextInTour(currCity);
         path[i] = currCity;
     }
 
@@ -205,7 +263,7 @@ void TSPLKH::refreshTourRanks(int startCity)
     do
     {
         _tourInternal[currCity].rank = rank++;
-        currCity = _tourInternal[currCity].next;
+        currCity = getNextInTour(currCity);
     } while (currCity != startCity);
 }
 
@@ -339,30 +397,178 @@ bool TSPLKH::validateTourSegments(int startCity) const
     return true;
 }
 
-void TSPLKH::applyTwoOptMove(int t1, int t2, int t3, int t4)
+void TSPLKH::rebuildSegmentIndexes()
 {
-    assert(_tourInternal[t1].next == t2);
-    assert(_tourInternal[t3].prev == t4);
+    const int n = (int)_tourInternal.size();
+    const int segmentCount = (int)_tourSegments.size();
 
-    //Reverse the segment between t2 and t4.
-    int currCity = t2;
-    while (true)
+    _citySegment.assign(n, -1);
+    _cityOffsetInSegment.assign(n, -1);
+
+    for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
     {
-        std::swap(_tourInternal[currCity].prev, _tourInternal[currCity].next);
-        if (currCity == t4)
-            break;
+        auto& segment = _tourSegments[segmentIndex];
 
-        currCity = _tourInternal[currCity].prev;
+        //Keep the vector order, segment rank, and segment links in sync.
+        segment.rank = segmentIndex;
+        segment.prev = segmentIndex == 0 ? segmentCount - 1 : segmentIndex - 1;
+        segment.next = segmentIndex + 1 == segmentCount ? 0 : segmentIndex + 1;
+
+        //City offsets are physical positions inside segment.cities.
+        for (int offset = 0; offset < (int)segment.cities.size(); offset++)
+        {
+            const int city = segment.cities[offset];
+            _citySegment[city] = segmentIndex;
+            _cityOffsetInSegment[city] = offset;
+        }
+    }
+}
+
+std::vector<int> TSPLKH::getSegmentCitiesInTourOrder(const LKHTourSegment& segment) const
+{
+    //Return the segment contents in logical tour order.
+    //If the segment is marked reversed, physical storage is read backwards.
+    std::vector<int> cities = segment.cities;
+    if (segment.reversed)
+        std::reverse(cities.begin(), cities.end());
+
+    return cities;
+}
+
+void TSPLKH::splitSegmentBeforeCity(int city)
+{
+    assert(city >= 0 && city < (int)_citySegment.size());
+
+    const int segmentIndex = _citySegment[city];
+    auto logicalCities = getSegmentCitiesInTourOrder(_tourSegments[segmentIndex]);
+
+    const auto it = std::find(logicalCities.begin(), logicalCities.end(), city);
+    assert(it != logicalCities.end());
+
+    const int splitOffset = (int)(it - logicalCities.begin());
+    if (splitOffset == 0)
+        return;
+
+    //Split the old segment into the cities before 'city' and the cities starting at 'city'.
+    LKHTourSegment before;
+    before.cities.assign(logicalCities.begin(), logicalCities.begin() + splitOffset);
+
+    LKHTourSegment after;
+    after.cities.assign(logicalCities.begin() + splitOffset, logicalCities.end());
+
+    //The split pieces are stored directly in logical order, so their lazy flag is reset.
+    _tourSegments[segmentIndex] = before;
+    _tourSegments.insert(_tourSegments.begin() + segmentIndex + 1, after);
+    rebuildSegmentIndexes();
+}
+
+void TSPLKH::splitSegmentAfterCity(int city)
+{
+    assert(city >= 0 && city < (int)_citySegment.size());
+
+    const int segmentIndex = _citySegment[city];
+    auto logicalCities = getSegmentCitiesInTourOrder(_tourSegments[segmentIndex]);
+
+    const auto it = std::find(logicalCities.begin(), logicalCities.end(), city);
+    assert(it != logicalCities.end());
+
+    const int splitOffset = (int)(it - logicalCities.begin()) + 1;
+    if (splitOffset == (int)logicalCities.size())
+        return;
+
+    //Split the old segment into the cities through 'city' and the cities after it.
+    LKHTourSegment before;
+    before.cities.assign(logicalCities.begin(), logicalCities.begin() + splitOffset);
+
+    LKHTourSegment after;
+    after.cities.assign(logicalCities.begin() + splitOffset, logicalCities.end());
+
+    //The split pieces are stored directly in logical order, so their lazy flag is reset.
+    _tourSegments[segmentIndex] = before;
+    _tourSegments.insert(_tourSegments.begin() + segmentIndex + 1, after);
+    rebuildSegmentIndexes();
+}
+
+void TSPLKH::rotateTourSegmentsToFront(int segmentIndex)
+{
+    assert(segmentIndex >= 0 && segmentIndex < (int)_tourSegments.size());
+
+    //A circular tour has no fixed first segment, so rotating keeps the same tour.
+    std::rotate(_tourSegments.begin(), _tourSegments.begin() + segmentIndex, _tourSegments.end());
+    rebuildSegmentIndexes();
+}
+
+void TSPLKH::rebuildTourInternalFromSegments()
+{
+    const int n = (int)_tourInternal.size();
+    std::vector<int> tourOrder;
+    tourOrder.reserve(n);
+
+    //Materialize the logical segment order back into one city order.
+    //This keeps older code that reads _tourInternal.prev/next correct.
+    for (const auto& segment : _tourSegments)
+    {
+        const auto cities = getSegmentCitiesInTourOrder(segment);
+        tourOrder.insert(tourOrder.end(), cities.begin(), cities.end());
     }
 
-    //Reconnect the two broken tour edges in their improved arrangement.
-    _tourInternal[t1].next = t4;
-    _tourInternal[t4].prev = t1;
-    _tourInternal[t2].next = t3;
-    _tourInternal[t3].prev = t2;
+    assert((int)tourOrder.size() == n);
 
-    refreshTourRanks(0);
-    rebuildTourSegments(0);
+    for (int rank = 0; rank < n; rank++)
+    {
+        const int city = tourOrder[rank];
+        _tourInternal[city].prev = tourOrder[rank == 0 ? n - 1 : rank - 1];
+        _tourInternal[city].next = tourOrder[rank + 1 == n ? 0 : rank + 1];
+        _tourInternal[city].rank = rank;
+    }
+}
+
+void TSPLKH::flipTourPath(int firstCity, int lastCity)
+{
+    const int n = (int)_tourInternal.size();
+    assert(firstCity >= 0 && firstCity < n);
+    assert(lastCity >= 0 && lastCity < n);
+    assert(validateTourInternal(0));
+
+    if (firstCity == lastCity)
+        return;
+
+    //Make the flip boundaries align with segment boundaries.
+    splitSegmentBeforeCity(firstCity);
+    splitSegmentAfterCity(lastCity);
+
+    //After splitting, firstCity is the first city of its segment.
+    const int firstSegment = _citySegment[firstCity];
+    rotateTourSegmentsToFront(firstSegment);
+
+    //After rotation, the path from firstCity forward starts at segment 0.
+    const int lastSegment = _citySegment[lastCity];
+
+    //Reverse the segment order for the flipped path.
+    std::reverse(_tourSegments.begin(), _tourSegments.begin() + lastSegment + 1);
+
+    //Each segment inside the flipped path also has its internal direction reversed.
+    for (int i = 0; i <= lastSegment; i++)
+        _tourSegments[i].reversed = !_tourSegments[i].reversed;
+
+    //Only segment metadata is updated here. Materialization is done by the caller if needed.
+    rebuildSegmentIndexes();
+
+    assert(validateTourSegments(0));
+}
+
+void TSPLKH::applyTwoOptMove(int t1, int t2, int t3, int t4)
+{
+    assert(getNextInTour(t1) == t2);
+    assert(getPrevInTour(t3) == t4);
+
+    //Reverse the tour path that remains between the two deleted edges.
+    //Because the tour is cyclic, this also creates the new boundary edges:
+    //t1 -> t4 and t2 -> t3.
+    flipTourPath(t2, t4);
+
+    //Materialize once so older code that still reads _tourInternal remains correct.
+    rebuildTourInternalFromSegments();
 
     assert(validateTourInternal(0));
 }

@@ -231,6 +231,10 @@ private:
 
     bool isEdgeInTour(int a, int b) const;
 
+    int getPrevInTour(int city) const;
+
+    int getNextInTour(int city) const;
+
     bool isBetweenInTour(int a, int b, int c) const; //Starting from city a and walking forward in the tour, do we reach b before we reach c?
 
     long long calculateInternalTourCost(const std::vector<std::vector<int>>& adjMat, int startCity = 0) const;
@@ -242,6 +246,20 @@ private:
     void rebuildTourSegments(int startCity = 0);
 
     bool validateTourSegments(int startCity = 0) const;
+
+    void rebuildSegmentIndexes();
+
+    std::vector<int> getSegmentCitiesInTourOrder(const LKHTourSegment& segment) const;
+
+    void splitSegmentBeforeCity(int city);
+
+    void splitSegmentAfterCity(int city);
+
+    void rotateTourSegmentsToFront(int segmentIndex);
+
+    void rebuildTourInternalFromSegments();
+
+    void flipTourPath(int firstCity, int lastCity); //reverses the current forward tour path from firstCity to lastCity
 
     void applyTwoOptMove(int t1, int t2, int t3, int t4);
 
