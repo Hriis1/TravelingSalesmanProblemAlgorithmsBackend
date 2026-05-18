@@ -52,8 +52,8 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     generateAlphaCandidates(adjMat);
     auto t2 = std::chrono::steady_clock::now();
 
-    // Build the initial tour using NN
-    buildInitialTourNN(adjMat, 0);
+    // Build the initial tour using LKH's default WALK-style candidate walk.
+    buildInitialTourWalk(0);
     auto t3 = std::chrono::steady_clock::now();
 
     // Run the variable-depth k-opt search.

@@ -215,6 +215,8 @@ private:
     //Tour manipulation funcs
     void buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity = 0);
 
+    void buildInitialTourWalk(int startCity = 0);
+
     bool isEdgeInTour(int a, int b) const;
 
     int getPrevInTour(int city) const;

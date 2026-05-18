@@ -41,6 +41,78 @@ void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int
     rebuildTourSegmentsFromPath(nnPath);
 }
 
+void TSPLKH::buildInitialTourWalk(int startCity)
+{
+    const int n = (int)_candidates.size();
+    assert(n >= 3);
+    assert(startCity >= 0 && startCity < n);
+
+    std::vector<char> chosen(n, 0);
+    std::vector<int> next(n);
+    std::vector<int> prev(n);
+
+    //LKH keeps nodes in a circular list and moves each selected successor
+    //directly after the current node. This list reproduces that behavior.
+    for (int city = 0; city < n; city++)
+    {
+        next[city] = city + 1 == n ? 0 : city + 1;
+        prev[city] = city == 0 ? n - 1 : city - 1;
+    }
+
+    std::vector<int> path;
+    path.reserve(n);
+
+    int current = startCity;
+    chosen[current] = 1;
+    path.push_back(current);
+
+    for (int count = 1; count < n; count++)
+    {
+        std::vector<int> alternatives;
+
+        //Default LKH WALK case D: prefer unchosen candidate edges.
+        for (const auto& candidate : _candidates[current])
+        {
+            const int to = candidate.to;
+            if (to >= 0 && to < n && !chosen[to])
+                alternatives.push_back(to);
+        }
+
+        int selected = -1;
+        if (!alternatives.empty())
+        {
+            //If several candidate successors are possible, LKH chooses one at random.
+            std::uniform_int_distribution<int> pick(0, (int)alternatives.size() - 1);
+            selected = alternatives[pick(_gen)];
+        }
+        else
+        {
+            //Default LKH WALK case E: take the next unchosen node in the current ring.
+            selected = next[current];
+            while (chosen[selected])
+                selected = next[selected];
+        }
+
+        //Move the selected node to follow current in the circular list, like LKH Follow().
+        if (next[current] != selected)
+        {
+            next[prev[selected]] = next[selected];
+            prev[next[selected]] = prev[selected];
+
+            prev[selected] = current;
+            next[selected] = next[current];
+            prev[next[current]] = selected;
+            next[current] = selected;
+        }
+
+        current = selected;
+        chosen[current] = 1;
+        path.push_back(current);
+    }
+
+    rebuildTourSegmentsFromPath(path);
+}
+
 bool TSPLKH::isEdgeInTour(int a, int b) const
 {
     return getPrevInTour(a) == b || getNextInTour(a) == b;
