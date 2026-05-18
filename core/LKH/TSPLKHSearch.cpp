@@ -37,8 +37,6 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 {
 	assert(t1 >= 0 && t1 < (int)_citySegment.size());
 
-	std::vector<LKHMoveState> improvingMoves;
-
 	for (int i = 0; i < 2; i++)
 	{
 		//try edge with prev city and next city
@@ -47,45 +45,66 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 		if (t2 < 0)
 			continue;
 
-		//deleted edge is (t1, t2).
-		const long long gainFromDeletedEdge = adjMat[t1][t2];
+		//A BestKOptMove attempt may apply temporary non-improving moves.
+		//Keep the original tour so the whole attempt can be restored if it fails.
+		const std::vector<int> originalPath = buildOutputPath(0);
 
-		//Init the LKHMoveState
-		LKHMoveState moveState;
-		initializeMoveState(moveState, t1, t2, gainFromDeletedEdge);
+		int currentT2 = t2;
+		long long currentGain = adjMat[t1][t2];
+		std::vector<std::pair<int, int>> excludedEdges;
+		std::vector<LKHMoveState> appliedPromisingMoves;
 
-		//Search all allowed branches from this first deleted edge and save improving closes.
-		findBestSequentialMove(moveState, improvingMoves, adjMat);
-	}
-
-	if (improvingMoves.empty())
-		return false;
-
-	//Try the highest-gain moves first; some positive closes can still form invalid subtours.
-	std::sort(
-		improvingMoves.begin(),
-		improvingMoves.end(),
-		[](const LKHMoveState& a, const LKHMoveState& b)
+		for (int swaps = 0; swaps < (int)_citySegment.size(); swaps++)
 		{
-			return a.gain > b.gain;
-		});
+			LKHMoveState moveState;
+			initializeMoveState(moveState, t1, currentT2, currentGain);
 
-	for (const auto& move : improvingMoves)
-	{
-		if (!tryApplyKOptMove(move))
-			continue;
+			LKHBestMoveResult result;
+			findBestKOptMove(moveState, result, adjMat, excludedEdges);
 
-		activateMoveNodes(move);
-		return true;
+			if (result.foundImprovement)
+			{
+				//A positive feasible close finishes the whole LK chain.
+				if (!tryApplyKOptMove(result.improvingMove))
+					break;
+
+				for (const auto& move : appliedPromisingMoves)
+					activateMoveNodes(move);
+				activateMoveNodes(result.improvingMove);
+				return true;
+			}
+
+			if (!result.foundPromisingMove)
+				break;
+
+			//Apply the best feasible non-improving K-opt move and continue
+			//by deleting its closing edge in the next BestKOptMove call.
+			if (!tryApplyKOptMove(result.promisingMove))
+				break;
+
+			appliedPromisingMoves.push_back(result.promisingMove);
+
+			//LKH excludes deleted edges from the temporary chain to avoid
+			//cycling back through the same exchange.
+			for (const auto& edge : result.promisingMove.deleted)
+				excludedEdges.push_back(edge);
+
+			currentT2 = result.nextEndpoint;
+			currentGain = result.promisingGain;
+		}
+
+		//No final improvement was found from this first edge.
+		rebuildTourSegmentsFromPath(originalPath);
 	}
 
 	return false;
 }
 
-bool TSPLKH::findBestSequentialMove(
+bool TSPLKH::findBestKOptMove(
 	LKHMoveState& state,
-	std::vector<LKHMoveState>& improvingMoves,
-	const std::vector<std::vector<int>>& adjMat)
+	LKHBestMoveResult& result,
+	const std::vector<std::vector<int>>& adjMat,
+	const std::vector<std::pair<int, int>>& excludedEdges)
 {
 	assert(state.t.size() >= 2);
 
@@ -96,7 +115,18 @@ bool TSPLKH::findBestSequentialMove(
 	if (_config.backtrackingLimit > 0 && state.backtrackingCount >= _config.backtrackingLimit)
 		return false;
 
-	bool foundImprovement = !improvingMoves.empty();
+	auto isExcluded = [&](int a, int b)
+	{
+		for (const auto& edge : excludedEdges)
+		{
+			if (edge.first == a && edge.second == b)
+				return true;
+			if (edge.first == b && edge.second == a)
+				return true;
+		}
+
+		return false;
+	};
 
 	for (const auto& candidate : _candidates[t2]) //for each of the candidate next eges of t2
 	{
@@ -129,6 +159,10 @@ bool TSPLKH::findBestSequentialMove(
 			if (isEndpointUsed(state, t4))
 				continue;
 
+			//Do not reuse edges excluded by earlier temporary K-opt moves.
+			if (isExcluded(t3, t4))
+				continue;
+
 			//Record the deleted tour edge so the branch now ends at t4.
 			state.recordDeletedEdge(t3, t4);
 			state.pushEndpoint(t4);
@@ -146,9 +180,23 @@ bool TSPLKH::findBestSequentialMove(
 					state.recordAddedEdge(t4, t1);
 					state.gain = totalGain;
 
-					//Save the complete move, but do not apply it during recursive search.
-					improvingMoves.push_back(state);
-					foundImprovement = true;
+					//LKH applies the first feasible positive close immediately.
+					std::vector<int> unusedPath;
+					if (buildPathAfterKOptMove(state, unusedPath))
+					{
+						result.foundImprovement = true;
+						result.improvingMove = state;
+						result.improvementGain = totalGain;
+
+						state.gain = gainBeforeClose;
+						state.undoAddedEdge();
+						state.popEndpoint();
+						state.undoDeletedEdge();
+						state.gain = gainAfterAdd;
+						state.popEndpoint();
+						state.undoAddedEdge();
+						return true;
+					}
 
 					//Undo the closing edge before continuing this branch deeper.
 					state.gain = gainBeforeClose;
@@ -158,8 +206,42 @@ bool TSPLKH::findBestSequentialMove(
 
 			//Continue the sequential LK chain deeper to look for an even better close.
 			if (state.depth < _config.maxDepth)
-				foundImprovement =
-					findBestSequentialMove(state, improvingMoves, adjMat) || foundImprovement;
+			{
+				if (findBestKOptMove(state, result, adjMat, excludedEdges))
+				{
+					state.gain = gainAfterAdd;
+					state.popEndpoint();
+					state.undoDeletedEdge();
+					state.gain = initialGain;
+					state.popEndpoint();
+					state.undoAddedEdge();
+					return true;
+				}
+			}
+			else if (t4 != t1 && !isAddedEdge(state, t4, t1) && !isEdgeInTour(t4, t1))
+			{
+				const long long totalGain = gainBeforeClose - adjMat[t4][t1];
+
+				//At maximum depth, LKH remembers the best feasible non-improving
+				//K-opt move and uses it as a continuation if no improvement exists.
+				if (totalGain <= 0 && gainBeforeClose > result.promisingGain)
+				{
+					state.recordAddedEdge(t4, t1);
+					state.gain = totalGain;
+
+					std::vector<int> unusedPath;
+					if (buildPathAfterKOptMove(state, unusedPath))
+					{
+						result.foundPromisingMove = true;
+						result.promisingMove = state;
+						result.promisingGain = gainBeforeClose;
+						result.nextEndpoint = t4;
+					}
+
+					state.gain = gainBeforeClose;
+					state.undoAddedEdge();
+				}
+			}
 
 			//This branch failed, so undo the last deleted edge before trying the next one.
 			state.backtrackingCount++;
@@ -180,7 +262,7 @@ bool TSPLKH::findBestSequentialMove(
 			return false;
 	}
 
-	return foundImprovement;
+	return false;
 }
 
 void TSPLKH::runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat)
@@ -251,6 +333,18 @@ bool TSPLKH::isEndpointUsed(const LKHMoveState& state, int city) const
 }
 
 bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
+{
+	std::vector<int> newPath;
+	if (!buildPathAfterKOptMove(state, newPath))
+		return false;
+
+	//Make the segment tour the primary accepted representation.
+	rebuildTourSegmentsFromPath(newPath);
+
+	return validateTourStructure(0);
+}
+
+bool TSPLKH::buildPathAfterKOptMove(const LKHMoveState& state, std::vector<int>& newPath) const
 {
 	const int n = (int)_citySegment.size();
 	if (n < 3 || state.added.size() != state.deleted.size())
@@ -324,7 +418,7 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 			return false;
 	}
 
-	std::vector<int> newPath;
+	newPath.clear();
 	newPath.reserve(n);
 
 	std::vector<char> visited(n, 0);
@@ -361,10 +455,7 @@ bool TSPLKH::tryApplyKOptMove(const LKHMoveState& state)
 	if (currCity != startCity)
 		return false;
 
-	//Make the segment tour the primary accepted representation.
-	rebuildTourSegmentsFromPath(newPath);
-
-	return validateTourStructure(0);
+	return true;
 }
 
 void TSPLKH::activateMoveNodes(const LKHMoveState& state)

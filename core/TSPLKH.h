@@ -148,6 +148,18 @@ private:
         }
     };
 
+    //Result of one LKH-style BestKOptMove search.
+    struct LKHBestMoveResult
+    {
+        bool foundImprovement = false;              //true when a positive feasible close was found
+        bool foundPromisingMove = false;            //true when a non-improving continuation move was found
+        LKHMoveState improvingMove;                 //complete positive move to apply immediately
+        LKHMoveState promisingMove;                 //complete non-improving move used to continue the LK chain
+        long long improvementGain = 0;              //gain of improvingMove
+        long long promisingGain = LLONG_MIN;        //gain before promisingMove's closing edge is removed next
+        int nextEndpoint = -1;                      //endpoint connected to t1 by promisingMove
+    };
+
 public:
 
     TSPLKH(const LKHConfig& config, unsigned int seed = std::random_device{}());
@@ -258,10 +270,7 @@ private:
 
     bool tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adjMat); //This tries to find an improving LK move that starts from city t1
 
-    bool findBestSequentialMove(
-        LKHMoveState& state,
-        std::vector<LKHMoveState>& improvingMoves,
-        const std::vector<std::vector<int>>& adjMat);
+    bool findBestKOptMove(LKHMoveState& state, LKHBestMoveResult& result, const std::vector<std::vector<int>>& adjMat, const std::vector<std::pair<int, int>>& excludedEdges);
 
     void runLinKernighanSearch(const std::vector<std::vector<int>>& adjMat);
 
@@ -273,6 +282,8 @@ private:
     bool isEndpointUsed(const LKHMoveState& state, int city) const; //checks weather a city is already used as a t endpoint
 
     bool tryApplyKOptMove(const LKHMoveState& state); //tries to apply the currently recorded k-opt move
+
+    bool buildPathAfterKOptMove(const LKHMoveState& state, std::vector<int>& newPath) const; //checks a move and builds the resulting path
 
     void activateMoveNodes(const LKHMoveState& state); //activates all cities touched by the accepted move
 
