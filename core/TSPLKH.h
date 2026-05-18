@@ -192,7 +192,7 @@ private:
     //
     //Only the transformed total cost is returned because LKH keeps the
     //tree state on the _nodes themselves.
-    long long buildMinimumOneTree(const std::vector<std::vector<int>>& adjMat);
+    long long buildMinimumOneTree(const std::vector<std::vector<int>>& adjMat, bool sparse = false);
 
     long long ascent(const std::vector<std::vector<int>>& adjMat);
 

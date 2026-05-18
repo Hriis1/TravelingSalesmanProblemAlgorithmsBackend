@@ -1,4 +1,5 @@
 #include "../TSPLKH.h"
+#include <queue>
 
 void TSPLKH::updatePenalty(LKHNode& node, long long delta)
 {
@@ -227,75 +228,160 @@ std::vector<int> TSPLKH::buildTourFromOneTree() const
     return tour;
 }
 
-long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMat)
+long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMat, bool sparse)
 {
     const int n = (int)adjMat.size();
     assert(n >= 3);
     assert((int)_nodes.size() == n);
 
-    //Clear the previous 1-tree state and save lastdegree. Do not clear pi here
-    _oneTreeExtraU = -1;
-    _oneTreeExtraV = -1;
-    for (int i = 0; i < n; i++)
-    {
-        _nodes[i].lastDegree = _nodes[i].degree;
-        _nodes[i].degree = 0;
-        _nodes[i].parent = -1;
-        _nodes[i].parentCost = 0;
-    }
+    const bool useSparse = sparse && !_ascentCandidates.empty();
 
-    long long totalCost = 0;
+    //Save previous degrees once. If sparse construction falls back to dense,
+    //lastDegree must still refer to the tree from the previous ascent step.
+    std::vector<int> previousDegree(n);
+    for (int i = 0; i < n; i++)
+        previousDegree[i] = _nodes[i].degree;
+
+    auto resetOneTreeState = [&]()
+    {
+        _oneTreeExtraU = -1;
+        _oneTreeExtraV = -1;
+        for (int i = 0; i < n; i++)
+        {
+            _nodes[i].lastDegree = previousDegree[i];
+            _nodes[i].degree = 0;
+            _nodes[i].parent = -1;
+            _nodes[i].parentCost = 0;
+        }
+    };
+
+    resetOneTreeState();
 
     //Prim's algorithm state for the MST over all nodes.
     std::vector<char> inMST(n, 0);
     std::vector<long long> bestCost(n, LLONG_MAX);
     std::vector<int> bestParent(n, -1);
 
-    //Start Prim from node 0. It becomes the MST root and has no parent.
-    bestCost[0] = 0;
+    long long totalCost = 0;
+    int nodesInMST = 0;
+    bool sparseTreeBuilt = false;
 
-    for (int step = 0; step < n; step++)
+    if (useSparse)
     {
-        int v = -1;
-        long long vCost = LLONG_MAX;
+        using QueueItem = std::pair<long long, int>;
+        std::priority_queue<QueueItem, std::vector<QueueItem>, std::greater<QueueItem>> queue;
 
-        //Pick the node outside the MST with the cheapest known
-        //connection to the current MST.
-        for (int i = 0; i < n; i++)
+        //Sparse Prim starts from city 0 and only relaxes ascent-candidate edges.
+        bestCost[0] = 0;
+        queue.emplace(0, 0);
+
+        while (!queue.empty() && nodesInMST < n)
         {
-            if (!inMST[i] && bestCost[i] < vCost)
+            const QueueItem top = queue.top();
+            const long long vCost = top.first;
+            const int v = top.second;
+            queue.pop();
+
+            //Skip stale heap entries that were improved after insertion.
+            if (inMST[v] || vCost != bestCost[v])
+                continue;
+
+            inMST[v] = 1;
+            nodesInMST++;
+
+            //If v has a parent, add that candidate edge to the sparse MST.
+            if (bestParent[v] != -1)
             {
-                v = i;
-                vCost = bestCost[i];
+                const int parent = bestParent[v];
+                _nodes[v].parent = parent;
+                _nodes[v].parentCost = vCost;
+                addOneTreeEdge(v, parent);
+                totalCost += vCost;
+            }
+
+            //Only inspect ascent candidates. This is the LKH-style speedup.
+            for (const auto& candidate : _ascentCandidates[v])
+            {
+                const int w = candidate.to;
+                if (w < 0 || w >= n || inMST[w])
+                    continue;
+
+                const long long cost = getTransformedCost(v, w, adjMat);
+                if (cost < bestCost[w])
+                {
+                    bestCost[w] = cost;
+                    bestParent[w] = v;
+                    queue.emplace(cost, w);
+                }
             }
         }
 
-        assert(v != -1);
-        inMST[v] = 1;
-
-        //If v has a parent, add that edge to the MST part of the 1-tree.
-        //The first inserted node is the MST root and contributes no edge.
-        if (bestParent[v] != -1)
+        //If the sparse graph is disconnected, rebuild this 1-tree densely.
+        //That keeps the state valid; the LKH-style quality safeguard comes next.
+        if (nodesInMST == n)
         {
-            const int parent = bestParent[v];
-            _nodes[v].parent = parent;
-            _nodes[v].parentCost = vCost;
-            addOneTreeEdge(v, parent);
-            totalCost += vCost;
+            sparseTreeBuilt = true;
         }
-
-        //Update the cheapest known connection for every node that is
-        //still outside the MST.
-        for (int w = 0; w < n; w++)
+        else
         {
-            if (inMST[w] || w == v)
-                continue;
+            resetOneTreeState();
+            inMST.assign(n, 0);
+            bestCost.assign(n, LLONG_MAX);
+            bestParent.assign(n, -1);
+            totalCost = 0;
+            nodesInMST = 0;
+        }
+    }
 
-            const long long cost = getTransformedCost(v, w, adjMat);
-            if (cost < bestCost[w])
+    if (!useSparse || nodesInMST != n)
+    {
+        //Start dense Prim from city 0. It becomes the MST root and has no parent.
+        bestCost[0] = 0;
+
+        for (int step = 0; step < n; step++)
+        {
+            int v = -1;
+            long long vCost = LLONG_MAX;
+
+            //Pick the node outside the MST with the cheapest known
+            //connection to the current MST.
+            for (int i = 0; i < n; i++)
             {
-                bestCost[w] = cost;
-                bestParent[w] = v;
+                if (!inMST[i] && bestCost[i] < vCost)
+                {
+                    v = i;
+                    vCost = bestCost[i];
+                }
+            }
+
+            assert(v != -1);
+            inMST[v] = 1;
+            nodesInMST++;
+
+            //If v has a parent, add that edge to the MST part of the 1-tree.
+            //The first inserted node is the MST root and contributes no edge.
+            if (bestParent[v] != -1)
+            {
+                const int parent = bestParent[v];
+                _nodes[v].parent = parent;
+                _nodes[v].parentCost = vCost;
+                addOneTreeEdge(v, parent);
+                totalCost += vCost;
+            }
+
+            //Update the cheapest known connection for every node that is
+            //still outside the MST.
+            for (int w = 0; w < n; w++)
+            {
+                if (inMST[w] || w == v)
+                    continue;
+
+                const long long cost = getTransformedCost(v, w, adjMat);
+                if (cost < bestCost[w])
+                {
+                    bestCost[w] = cost;
+                    bestParent[w] = v;
+                }
             }
         }
     }
@@ -332,16 +418,56 @@ long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMa
         int bestNext = -1;
         long long bestNextCost = LLONG_MAX;
 
-        for (int j = 0; j < n; j++)
+        if (sparseTreeBuilt)
         {
-            if (j == leaf || j == mstNeighbor)
-                continue;
-
-            const long long cost = getTransformedCost(leaf, j, adjMat);
-            if (cost < bestNextCost)
+            //In sparse ascent mode, the extra edge is also selected from
+            //the ascent candidate graph, matching the sparse 1-tree idea.
+            for (const auto& candidate : _ascentCandidates[leaf])
             {
-                bestNext = j;
-                bestNextCost = cost;
+                const int j = candidate.to;
+                if (j == leaf || j == mstNeighbor)
+                    continue;
+
+                const long long cost = getTransformedCost(leaf, j, adjMat);
+                if (cost < bestNextCost)
+                {
+                    bestNext = j;
+                    bestNextCost = cost;
+                }
+            }
+        }
+        else
+        {
+            //Dense mode scans the complete graph for the cheapest valid extra edge.
+            for (int j = 0; j < n; j++)
+            {
+                if (j == leaf || j == mstNeighbor)
+                    continue;
+
+                const long long cost = getTransformedCost(leaf, j, adjMat);
+                if (cost < bestNextCost)
+                {
+                    bestNext = j;
+                    bestNextCost = cost;
+                }
+            }
+        }
+
+        //If a sparse leaf lacks a usable non-MST candidate, scan all edges
+        //for that leaf so the 1-tree remains valid.
+        if (bestNext == -1 && sparseTreeBuilt)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                if (j == leaf || j == mstNeighbor)
+                    continue;
+
+                const long long cost = getTransformedCost(leaf, j, adjMat);
+                if (cost < bestNextCost)
+                {
+                    bestNext = j;
+                    bestNextCost = cost;
+                }
             }
         }
 
@@ -376,7 +502,8 @@ long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMa
     assert(isOneTreeValid(n));
 
 #ifndef NDEBUG
-    assert(validateMinimumOneTree(adjMat, totalCost));
+    if (!sparseTreeBuilt)
+        assert(validateMinimumOneTree(adjMat, totalCost));
 #endif
 
     return totalCost;
@@ -435,8 +562,8 @@ long long TSPLKH::ascent(const std::vector<std::vector<int>>& adjMat)
                 }
             }
 
-            //build new 1-tree with updated penalties
-            oneTreeCost = buildMinimumOneTree(adjMat);
+            //During ascent, rebuild the 1-tree in the sparse ascent-candidate graph.
+            oneTreeCost = buildMinimumOneTree(adjMat, true);
             lowerBound = calculateOneTreeLowerBound(oneTreeCost);
 
             //if a better lower bound was found
