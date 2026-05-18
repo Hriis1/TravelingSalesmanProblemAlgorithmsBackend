@@ -511,105 +511,152 @@ long long TSPLKH::buildMinimumOneTree(const std::vector<std::vector<int>>& adjMa
 
 long long TSPLKH::ascent(const std::vector<std::vector<int>>& adjMat)
 {
-    //Build the initial 1-tree and get its cost
-    long long oneTreeCost = buildMinimumOneTree(adjMat);
-    long long lowerBound = calculateOneTreeLowerBound(oneTreeCost);
-
-    //if one tree is already a tour
-    if (_norm == 0)
-    {
-        _currSolution.path = buildTourFromOneTree();
-        _currSolution.calculateDist(adjMat);
-        return lowerBound;
-    }
-
-    //generate alpha candidates for ascent
-    generateAlphaCandidates(adjMat, _ascentCandidates, _config.ascentCandidates, true);
-
-    //Set last degree = degree after 1st 1-tree
-    for (auto& node : _nodes)
-        node.lastDegree = node.degree;
-
-    saveBestPenaltyState(lowerBound);
-
-    //Init vars for ascent
     const int n = (int)_nodes.size();
+    int ascentCandidateCount = std::min(_config.ascentCandidates, n);
 
     const int initialPeriod =
         _config.initialPeriod > 0 ? _config.initialPeriod : std::max(n / 2, 100);
 
-    long long stepSize = _config.initialStepSize * _config.precision;
-    bool initialPhase = true;
-
-    bool stopAscent = false;
-
-    for (int period = initialPeriod; period > 0 && stepSize > 0 && _norm != 0; period /= 2, stepSize /= 2)
+    while (true)
     {
-        for (int p = 1; stepSize > 0 && p <= period && _norm != 0; p++)
+        //A sparse-graph restart follows LKH: reset Pi and redo ascent
+        //with a larger ascent candidate graph.
+        _piSum = 0;
+        _bestPisSum = 0;
+        _bestLowerBound = LLONG_MIN;
+        _bestNorm = LLONG_MAX;
+        for (auto& node : _nodes)
+            node.pi = 0;
+
+        //Build the first 1-tree in the full graph.
+        long long oneTreeCost = buildMinimumOneTree(adjMat);
+        long long lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+        long long safeguardLowerBound = lowerBound;
+
+        if (_norm == 0)
         {
-            //Update penalties
-            for (size_t n = 0; n < _nodes.size(); n++)
-            {
-                long long v = (long long)_nodes[n].degree - 2;
-
-                //Only update penalty if  degree violation != 0
-                if (v != 0)
-                {
-                    long long lastV = (long long)_nodes[n].lastDegree - 2;
-                    long long delta = stepSize * ((7 * v) + (3 * lastV)) / 10;
-
-                    updatePenalty(_nodes[n], delta);
-                }
-            }
-
-            //During ascent, rebuild the 1-tree in the sparse ascent-candidate graph.
-            oneTreeCost = buildMinimumOneTree(adjMat, true);
-            lowerBound = calculateOneTreeLowerBound(oneTreeCost);
-
-            //if a better lower bound was found
-            if (lowerBound > _bestLowerBound ||
-                (lowerBound == _bestLowerBound && _norm < _bestNorm))
-            {
-                saveBestPenaltyState(lowerBound);
-
-                if (initialPhase) //double stepSize on improvement during the initial phase
-                    stepSize *= 2;
-
-                if (p == period) //double period if the improvement happens on the final iteration of the current period, capped at initialPeriod
-                    period = std::min(initialPeriod, period * 2);
-            }
-            else  //no improvement
-            {
-                // End the initial probing phase. Reset p so the reduced step size
-                // gets a full period of iterations under the normal ascent regime.
-                if (initialPhase && p > period / 2)
-                {
-                    initialPhase = false;
-                    p = 0;
-                    stepSize = 3 * stepSize / 4;
-                }
-            }
-
-            if (_norm == 0)
-            {
-                stopAscent = true;
-                break;
-            }
+            _currSolution.path = buildTourFromOneTree();
+            _currSolution.calculateDist(adjMat);
+            return lowerBound;
         }
 
-        if (stopAscent)
-            break;
+        saveBestPenaltyState(lowerBound);
+
+        //Generate the sparse graph used by repeated ascent 1-tree builds.
+        if (ascentCandidateCount > 0)
+            generateAlphaCandidates(adjMat, _ascentCandidates, ascentCandidateCount, true);
+        else
+            _ascentCandidates.clear();
+
+        //Use this first 1-tree as the previous degree vector for the first update.
+        for (auto& node : _nodes)
+            node.lastDegree = node.degree;
+
+        long long stepSize = _config.initialStepSize * _config.precision;
+        bool initialPhase = true;
+        bool stopAscent = false;
+        bool restartAscent = false;
+
+        for (int period = initialPeriod; period > 0 && stepSize > 0 && _norm != 0; period /= 2, stepSize /= 2)
+        {
+            for (int p = 1; stepSize > 0 && p <= period && _norm != 0; p++)
+            {
+                //Update penalties in the Held-Karp subgradient direction.
+                for (size_t i = 0; i < _nodes.size(); i++)
+                {
+                    long long v = (long long)_nodes[i].degree - 2;
+
+                    //Only cities with degree violation change their Pi value.
+                    if (v != 0)
+                    {
+                        long long lastV = (long long)_nodes[i].lastDegree - 2;
+                        long long delta = stepSize * ((7 * v) + (3 * lastV)) / 10;
+
+                        updatePenalty(_nodes[i], delta);
+                    }
+                }
+
+                //Most ascent iterations use the sparse ascent-candidate graph.
+                oneTreeCost = buildMinimumOneTree(adjMat, ascentCandidateCount > 0);
+                lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+
+                bool improved =
+                    lowerBound > _bestLowerBound ||
+                    (lowerBound == _bestLowerBound && _norm < _bestNorm);
+
+                //LKH safeguard: if a sparse bound looks unrealistically high,
+                //verify it with a full 1-tree before trusting it.
+                if (improved &&
+                    ascentCandidateCount > 0 &&
+                    ascentCandidateCount < n &&
+                    lowerBound > 2 * safeguardLowerBound)
+                {
+                    oneTreeCost = buildMinimumOneTree(adjMat, false);
+                    lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+
+                    //If the full graph gives a worse lower bound than the old
+                    //safeguard baseline, the sparse graph was too small.
+                    if (lowerBound < safeguardLowerBound)
+                    {
+                        ascentCandidateCount = std::min(n, 2 * ascentCandidateCount);
+                        restartAscent = true;
+                        break;
+                    }
+
+                    safeguardLowerBound = lowerBound;
+                    improved =
+                        lowerBound > _bestLowerBound ||
+                        (lowerBound == _bestLowerBound && _norm < _bestNorm);
+                }
+
+                if (improved)
+                {
+                    saveBestPenaltyState(lowerBound);
+
+                    //During the initial probing phase, LKH grows the step faster
+                    //when the bound keeps improving.
+                    if (initialPhase)
+                        stepSize *= 2;
+
+                    //If improvement happens at the end of the period, try a longer period.
+                    if (p == period)
+                        period = std::min(initialPeriod, period * 2);
+                }
+                else
+                {
+                    //End the initial probing phase and continue with a reduced step.
+                    if (initialPhase && p > period / 2)
+                    {
+                        initialPhase = false;
+                        p = 0;
+                        stepSize = 3 * stepSize / 4;
+                    }
+                }
+
+                if (_norm == 0)
+                {
+                    stopAscent = true;
+                    break;
+                }
+            }
+
+            if (restartAscent || stopAscent)
+                break;
+        }
+
+        if (restartAscent)
+            continue;
+
+        restoreBestPenaltyState();
+        oneTreeCost = buildMinimumOneTree(adjMat);
+        lowerBound = calculateOneTreeLowerBound(oneTreeCost);
+
+        if (_norm == 0)
+        {
+            _currSolution.path = buildTourFromOneTree();
+            _currSolution.calculateDist(adjMat);
+        }
+
+        return lowerBound;
     }
-
-    restoreBestPenaltyState();
-    oneTreeCost = buildMinimumOneTree(adjMat);
-    lowerBound = calculateOneTreeLowerBound(oneTreeCost);
-
-    if (_norm == 0)
-    {
-        _currSolution.path = buildTourFromOneTree();
-        _currSolution.calculateDist(adjMat);
-    }
-
-    return lowerBound;
 }
