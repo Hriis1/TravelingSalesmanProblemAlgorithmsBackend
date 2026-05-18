@@ -388,18 +388,22 @@ long long TSPLKH::ascent(const std::vector<std::vector<int>>& adjMat)
     long long oneTreeCost = buildMinimumOneTree(adjMat);
     long long lowerBound = calculateOneTreeLowerBound(oneTreeCost);
 
-    //Set last degree = degree after 1st 1-tree
-    for (auto& node : _nodes)
-        node.lastDegree = node.degree;
-
-    saveBestPenaltyState(lowerBound);
-
+    //if one tree is already a tour
     if (_norm == 0)
     {
         _currSolution.path = buildTourFromOneTree();
         _currSolution.calculateDist(adjMat);
         return lowerBound;
     }
+
+    //generate alpha candidates for ascent
+    generateAlphaCandidates(adjMat, _ascentCandidates, _config.ascentCandidates, true);
+
+    //Set last degree = degree after 1st 1-tree
+    for (auto& node : _nodes)
+        node.lastDegree = node.degree;
+
+    saveBestPenaltyState(lowerBound);
 
     //Init vars for ascent
     const int n = (int)_nodes.size();

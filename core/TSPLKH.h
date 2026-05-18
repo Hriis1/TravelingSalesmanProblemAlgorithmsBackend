@@ -14,7 +14,8 @@ struct LKHConfig
     // ASIGNED VALUES ARE JUST DEFAULTS
 
     int maxTrials = 50;                 //How many attempts LKH makes
-    int maxCandidates = 5;             //How many candidate edges each city considers
+    int maxCandidates = 5;              //How many candidate edges each city considers
+    int ascentCandidates = 50;          //How many candidates for the ascent trees
     int maxDepth = 5;                   //Maximum depth of the variable k-opt search
     int backtrackingLimit = 0;          //Limits how many failed alternatives are explored. 0 -> no limit
     int runs = 1;                       //How many independent full runs to do
@@ -199,15 +200,17 @@ private:
 
     void computeBetaValues(int from, const std::vector<std::vector<LKHTreeEdge>>& mstAdj, std::vector<long long>& beta) const;
 
-    void addAlphaCandidate(int from, const LKHCandidate& candidate, bool bounded);
+    void addAlphaCandidate(std::vector<std::vector<LKHCandidate>>& target, int from, const LKHCandidate& candidate, int maxCandidates, bool bounded);
 
     bool isMSTEdge(int u, int v) const;
 
     void generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat);
 
-    void symmetrizeCandidates();
+    void generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat, std::vector<std::vector<LKHCandidate>>& target, int maxCandidates, bool symmetric);
 
-    bool isCandidateOf(int city, int candidateToCheck) const;
+    void symmetrizeCandidates(std::vector<std::vector<LKHCandidate>>& target);
+
+    bool isCandidateOf(const std::vector<std::vector<LKHCandidate>>& target, int city, int candidateToCheck) const;
 
     //Tour manipulation funcs
     void buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity = 0);
@@ -291,6 +294,7 @@ private:
     int _oneTreeExtraV = -1;            //second endpoint of the non-MST 1-tree edge
 
     std::vector<std::vector<LKHCandidate>> _candidates; //candidate next cities for each city by alpha nearness
+    std::vector<std::vector<LKHCandidate>> _ascentCandidates;   //candidates for the ascent for each city
 
     //Segmented tour representation
     std::vector<LKHTourSegment> _tourSegments;          //Tour split into ordered segments
@@ -300,6 +304,4 @@ private:
     //k-opt search
     std::deque<int> _activeNodes;       //cities that still need to be tried                      
     std::vector<char> _isActive;        //flags for weather or not each city is active
-
-    int _buildMinimumOneTree = 0;
 };

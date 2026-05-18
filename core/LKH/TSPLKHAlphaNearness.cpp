@@ -91,18 +91,23 @@ void TSPLKH::computeBetaValues(
 #endif
 }
 
-void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate, bool bounded)
+void TSPLKH::addAlphaCandidate(
+    std::vector<std::vector<LKHCandidate>>& target,
+    int from,
+    const LKHCandidate& candidate,
+    int maxCandidates,
+    bool bounded)
 {
-    assert(!isCandidateOf(from, candidate.to));
+    assert(!isCandidateOf(target, from, candidate.to));
 
-    if (bounded && _config.maxCandidates <= 0)
+    if (bounded && maxCandidates <= 0)
         return;
 
-    auto& candidates = _candidates[from];
+    auto& candidates = target[from];
 
     //If the bounded list is full and this edge is not better, skip it.
     if (bounded &&
-        (int)candidates.size() == _config.maxCandidates &&
+        (int)candidates.size() == maxCandidates &&
         !(candidate < candidates.back()))
         return;
 
@@ -117,7 +122,7 @@ void TSPLKH::addAlphaCandidate(int from, const LKHCandidate& candidate, bool bou
     //Keep only the best configured number of candidates.
     if (bounded)
     {
-        if ((int)candidates.size() > _config.maxCandidates)
+        if ((int)candidates.size() > maxCandidates)
             candidates.pop_back();
     }
 }
@@ -132,16 +137,31 @@ bool TSPLKH::isMSTEdge(int u, int v) const
 
 void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat)
 {
+    //Final LK search candidates use the smaller search candidate limit.
+    generateAlphaCandidates(
+        adjMat,
+        _candidates,
+        _config.maxCandidates,
+        _config.symmetrizeCandidates);
+}
+
+void TSPLKH::generateAlphaCandidates(
+    const std::vector<std::vector<int>>& adjMat,
+    std::vector<std::vector<LKHCandidate>>& target,
+    int maxCandidates,
+    bool symmetric)
+{
     const int n = (int)adjMat.size();
 
     assert((int)_nodes.size() == n);
     assert(n > 0);
-    assert(_config.maxCandidates > 0);
+    assert(maxCandidates > 0);
 
-    _candidates.clear();
-    _candidates.resize(n);
+    //Reset only the target list so the same logic can build final or ascent candidates.
+    target.clear();
+    target.resize(n);
 
-    //Use the final ascent MST to compute max-edge path values.
+    //Use the current 1-tree MST to compute max-edge path values.
     const auto mstAdj = buildMSTAdjacency(adjMat);
 
     std::vector<long long> beta;
@@ -149,7 +169,7 @@ void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat
 
     for (int from = 0; from < n; from++)
     {
-        _candidates[from].reserve(std::min(_config.maxCandidates, n - 1));
+        target[from].reserve(std::min(maxCandidates, n - 1));
 
         //beta[to] = max MST edge on the path from 'from' to 'to'.
         computeBetaValues(from, mstAdj, beta);
@@ -176,42 +196,45 @@ void TSPLKH::generateAlphaCandidates(const std::vector<std::vector<int>>& adjMat
 
             assert(alpha >= 0);
 
-            addAlphaCandidate(from, { to, alpha, cost }, true);
+            //Keep only the best alpha-nearest edges for this city.
+            addAlphaCandidate(target, from, { to, alpha, cost }, maxCandidates, true);
         }
     }
 
-    //Symmetrize candidates
-    if (_config.symmetrizeCandidates)
-        symmetrizeCandidates();
-
+    //Complement the candidate graph so an accepted edge is visible from both endpoints.
+    if (symmetric)
+        symmetrizeCandidates(target);
 }
 
-void TSPLKH::symmetrizeCandidates()
+void TSPLKH::symmetrizeCandidates(std::vector<std::vector<LKHCandidate>>& target)
 {
-    const int n = _candidates.size();
+    const int n = target.size();
 
     // Remember original sizes so newly added reverse edges are not reprocessed.
     std::vector<int> originalSize(n);
     for (int i = 0; i < n; i++)
-        originalSize[i] = _candidates[i].size();
+        originalSize[i] = target[i].size();
 
     // Add missing reverse edges.
     for (int from = 0; from < n; from++)
     {
         for (int idx = 0; idx < originalSize[from]; idx++)
         {
-            const auto& candidate = _candidates[from][idx];
+            const auto& candidate = target[from][idx];
             const int to = candidate.to;
 
-            if (!isCandidateOf(to, from))
-                addAlphaCandidate(to, { from, candidate.alpha, candidate.cost }, false);
+            if (!isCandidateOf(target, to, from))
+                addAlphaCandidate(target, to, { from, candidate.alpha, candidate.cost }, 0, false);
         }
     }
 }
 
-bool TSPLKH::isCandidateOf(int city, int candidateToCheck) const
+bool TSPLKH::isCandidateOf(
+    const std::vector<std::vector<LKHCandidate>>& target,
+    int city,
+    int candidateToCheck) const
 {
-    const auto& candidates = _candidates[city];
+    const auto& candidates = target[city];
 
     for (const auto& candidate : candidates)
     {

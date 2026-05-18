@@ -1,6 +1,5 @@
 #include "../TSPLKH.h"
 
-#include <chrono>
 #include <iostream>
 
 TSPLKH::TSPLKH(const LKHConfig& config, unsigned int seed)
@@ -26,6 +25,8 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     _tourSegments.clear();
     _citySegment.assign(n, -1);
     _cityOffsetInSegment.assign(n, -1);
+    _ascentCandidates.clear();
+    _ascentCandidates.resize(n);
     for (int i = 0; i < n; i++)
     {
         _nodes[i].id = i;
@@ -34,6 +35,9 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
         _nodes[i].lastDegree = 2;
         _nodes[i].parent = -1;
         _nodes[i].parentCost = 0;
+
+        //ascent candidates
+        _ascentCandidates[i].reserve(_config.ascentCandidates);
     }
     _piSum = 0;
 
