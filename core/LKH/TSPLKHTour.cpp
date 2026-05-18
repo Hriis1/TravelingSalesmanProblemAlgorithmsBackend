@@ -482,15 +482,23 @@ void TSPLKH::flipTourPath(int firstCity, int lastCity)
     assert(validateTourStructure(0));
 }
 
-void TSPLKH::applyTwoOptMove(int t1, int t2, int t3, int t4)
+void TSPLKH::flipPathAndReconnect(int a, int b, int c, int d)
 {
-    assert(getNextInTour(t1) == t2);
-    assert(getPrevInTour(t3) == t4);
+    const int n = (int)_citySegment.size();
+    assert(a >= 0 && a < n);
+    assert(b >= 0 && b < n);
+    assert(c >= 0 && c < n);
+    assert(d >= 0 && d < n);
 
-    //Reverse the tour path that remains between the two deleted edges.
-    //Because the tour is cyclic, this also creates the new boundary edges:
-    //t1 -> t4 and t2 -> t3.
-    flipTourPath(t2, t4);
+    //This primitive represents:
+    //remove (a,b) and (d,c), add (a,d) and (b,c).
+    assert(getNextInTour(a) == b);
+    assert(getNextInTour(d) == c);
+
+    //The transformation is exactly a reversal of the forward path b..d.
+    //Because the tour is cyclic, reversing that interval reconnects:
+    //a -> d at the left boundary and b -> c at the right boundary.
+    flipTourPath(b, d);
 
     assert(validateTourStructure(0));
 }

@@ -1,5 +1,8 @@
 #include "../TSPLKH.h"
 
+#include <chrono>
+#include <iostream>
+
 TSPLKH::TSPLKH(const LKHConfig& config, unsigned int seed)
     :TSPAlgo(seed), _config(config)
 {}

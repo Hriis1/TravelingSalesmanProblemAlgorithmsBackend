@@ -242,7 +242,7 @@ private:
 
     void flipTourPath(int firstCity, int lastCity); //reverses the current forward tour path from firstCity to lastCity
 
-    void applyTwoOptMove(int t1, int t2, int t3, int t4);
+    void flipPathAndReconnect(int a, int b, int c, int d);
 
     //k-opt search
     void activateAllNodes(int nCities);
@@ -300,4 +300,6 @@ private:
     //k-opt search
     std::deque<int> _activeNodes;       //cities that still need to be tried                      
     std::vector<char> _isActive;        //flags for weather or not each city is active
+
+    int _buildMinimumOneTree = 0;
 };
