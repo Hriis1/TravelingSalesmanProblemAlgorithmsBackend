@@ -45,14 +45,11 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 		if (t2 < 0)
 			continue;
 
-		//A BestKOptMove attempt may apply temporary non-improving moves.
-		//Keep the original tour so the whole attempt can be restored if it fails.
-		const std::vector<int> originalPath = buildOutputPath(0);
-
 		int currentT2 = t2;
 		long long currentGain = adjMat[t1][t2];
 		std::vector<std::pair<int, int>> excludedEdges;
 		std::vector<LKHMoveState> appliedPromisingMoves;
+		std::vector<int> originalPath;
 
 		for (int swaps = 0; swaps < (int)_citySegment.size(); swaps++)
 		{
@@ -79,6 +76,9 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 
 			//Apply the best feasible non-improving K-opt move and continue
 			//by deleting its closing edge in the next BestKOptMove call.
+			if (appliedPromisingMoves.empty())
+				originalPath = buildOutputPath(0);
+
 			if (!tryApplyKOptMove(result.promisingMove))
 				break;
 
@@ -94,7 +94,8 @@ bool TSPLKH::tryImproveFromNode(int t1, const std::vector<std::vector<int>>& adj
 		}
 
 		//No final improvement was found from this first edge.
-		rebuildTourSegmentsFromPath(originalPath);
+		if (!appliedPromisingMoves.empty())
+			rebuildTourSegmentsFromPath(originalPath);
 	}
 
 	return false;
@@ -181,9 +182,12 @@ bool TSPLKH::findBestKOptMove(
 					state.gain = totalGain;
 
 					//LKH applies the first feasible positive close immediately.
-					std::vector<int> unusedPath;
-					if (buildPathAfterKOptMove(state, unusedPath))
+					if (isKOptMoveFeasibleFast(state))
 					{
+#ifndef NDEBUG
+						std::vector<int> debugPath;
+						assert(buildPathAfterKOptMove(state, debugPath));
+#endif
 						result.foundImprovement = true;
 						result.improvingMove = state;
 						result.improvementGain = totalGain;
@@ -229,9 +233,12 @@ bool TSPLKH::findBestKOptMove(
 					state.recordAddedEdge(t4, t1);
 					state.gain = totalGain;
 
-					std::vector<int> unusedPath;
-					if (buildPathAfterKOptMove(state, unusedPath))
+					if (isKOptMoveFeasibleFast(state))
 					{
+#ifndef NDEBUG
+						std::vector<int> debugPath;
+						assert(buildPathAfterKOptMove(state, debugPath));
+#endif
 						result.foundPromisingMove = true;
 						result.promisingMove = state;
 						result.promisingGain = gainBeforeClose;
@@ -454,6 +461,168 @@ bool TSPLKH::buildPathAfterKOptMove(const LKHMoveState& state, std::vector<int>&
 
 	if (currCity != startCity)
 		return false;
+
+	return true;
+}
+
+bool TSPLKH::isKOptMoveFeasibleFast(const LKHMoveState& state) const
+{
+	const int k = (int)state.deleted.size();
+	if (k < 2 || (int)state.added.size() != k || (int)state.t.size() != 2 * k)
+		return false;
+
+	struct Endpoint
+	{
+		int city = -1;
+		std::pair<int, int> tourPos;
+	};
+
+	std::vector<Endpoint> endpoints;
+	endpoints.reserve(2 * k);
+
+	//Convert a city into a sortable position in the current segmented tour.
+	auto tourPosition = [&](int city) -> std::pair<int, int>
+	{
+		const int segmentIndex = _citySegment[city];
+		const int offset = _cityOffsetInSegment[city];
+		const auto& segment = _tourSegments[segmentIndex];
+
+		//A reversed segment is read in the opposite logical direction.
+		const int logicalOffset =
+			segment.reversed ? (int)segment.cities.size() - 1 - offset : offset;
+
+		return { segment.rank, logicalOffset };
+	};
+
+	//Only the 2k move endpoints matter for feasibility.
+	for (int city : state.t)
+	{
+		if (city < 0 || city >= (int)_citySegment.size())
+			return false;
+
+		endpoints.push_back({ city, tourPosition(city) });
+	}
+
+	std::sort(endpoints.begin(), endpoints.end(), [](const Endpoint& a, const Endpoint& b)
+	{
+		return a.tourPos < b.tourPos;
+	});
+
+	//Map an endpoint city to its compressed endpoint index.
+	auto endpointIndex = [&](int city) -> int
+	{
+		for (int i = 0; i < (int)endpoints.size(); i++)
+		{
+			if (endpoints[i].city == city)
+				return i;
+		}
+
+		return -1;
+	};
+
+	auto sameUndirectedEdge = [](const std::pair<int, int>& edge, int a, int b)
+	{
+		return (edge.first == a && edge.second == b) ||
+			(edge.first == b && edge.second == a);
+	};
+
+	auto isDeletedEndpointEdge = [&](int a, int b)
+	{
+		for (const auto& edge : state.deleted)
+		{
+			if (sameUndirectedEdge(edge, a, b))
+				return true;
+		}
+
+		return false;
+	};
+
+	struct CompressedEdge
+	{
+		int a = -1;
+		int b = -1;
+	};
+
+	std::vector<CompressedEdge> compressedEdges;
+	compressedEdges.reserve(2 * k);
+
+	//Deleting k tour edges splits the old tour into k paths. In tour order,
+	//the remaining path pieces connect consecutive endpoints that were not deleted.
+	for (int i = 0; i < 2 * k; i++)
+	{
+		const int j = i + 1 == 2 * k ? 0 : i + 1;
+		const int a = endpoints[i].city;
+		const int b = endpoints[j].city;
+
+		if (!isDeletedEndpointEdge(a, b))
+			compressedEdges.push_back({ i, j });
+	}
+
+	//The added edges reconnect those path pieces. The result is feasible only
+	//if the compressed graph is one cycle through all 2k endpoints.
+	for (const auto& edge : state.added)
+	{
+		const int a = endpointIndex(edge.first);
+		const int b = endpointIndex(edge.second);
+		if (a == -1 || b == -1 || a == b)
+			return false;
+
+		compressedEdges.push_back({ a, b });
+	}
+
+	if ((int)compressedEdges.size() != 2 * k)
+		return false;
+
+	std::vector<std::vector<int>> endpointEdges(2 * k);
+	for (int edgeIndex = 0; edgeIndex < (int)compressedEdges.size(); edgeIndex++)
+	{
+		const auto& edge = compressedEdges[edgeIndex];
+		endpointEdges[edge.a].push_back(edgeIndex);
+		endpointEdges[edge.b].push_back(edgeIndex);
+	}
+
+	for (const auto& incidentEdges : endpointEdges)
+	{
+		if ((int)incidentEdges.size() != 2)
+			return false;
+	}
+
+	std::vector<char> seenEndpoint(2 * k, 0);
+	std::vector<char> seenEdge(2 * k, 0);
+
+	int current = 0;
+	int previousEdge = -1;
+	int visitedEdges = 0;
+
+	//Walk the compressed degree-2 graph. Feasible means it is one cycle,
+	//not several smaller cycles.
+	while (true)
+	{
+		seenEndpoint[current] = 1;
+
+		const int edgeA = endpointEdges[current][0];
+		const int edgeB = endpointEdges[current][1];
+		const int nextEdge = edgeA != previousEdge ? edgeA : edgeB;
+
+		if (seenEdge[nextEdge])
+			break;
+
+		seenEdge[nextEdge] = 1;
+		visitedEdges++;
+
+		const auto& edge = compressedEdges[nextEdge];
+		current = edge.a == current ? edge.b : edge.a;
+		previousEdge = nextEdge;
+	}
+
+	if (current != 0 || visitedEdges != 2 * k)
+		return false;
+
+	for (char seen : seenEndpoint)
+	{
+		if (!seen)
+			return false;
+	}
 
 	return true;
 }

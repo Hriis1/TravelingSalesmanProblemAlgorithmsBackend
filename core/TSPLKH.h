@@ -285,6 +285,8 @@ private:
 
     bool buildPathAfterKOptMove(const LKHMoveState& state, std::vector<int>& newPath) const; //checks a move and builds the resulting path
 
+    bool isKOptMoveFeasibleFast(const LKHMoveState& state) const; //checks k-opt feasibility using only move endpoints
+
     void activateMoveNodes(const LKHMoveState& state); //activates all cities touched by the accepted move
 
 private:
