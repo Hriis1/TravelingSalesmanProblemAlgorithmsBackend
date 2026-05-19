@@ -13,7 +13,7 @@ struct LKHConfig
 {
     // ASIGNED VALUES ARE JUST DEFAULTS
 
-    int maxTrials = 50;                 //How many attempts LKH makes
+    int maxTrials = 4;                 //How many attempts LKH makes
     int maxCandidates = 5;              //How many candidate edges each city considers
     int ascentCandidates = 50;          //How many candidates for the ascent trees
     int maxDepth = 5;                   //Maximum depth of the variable k-opt search

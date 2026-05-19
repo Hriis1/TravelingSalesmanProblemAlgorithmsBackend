@@ -57,7 +57,22 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     auto t3 = std::chrono::steady_clock::now();
 
     // Run the variable-depth k-opt search.
-    runLinKernighanSearch(adjMat);
+    long long bestCost = LLONG_MAX;
+    std::vector<int> bestPath;
+
+    for (int trial = 0; trial < _config.maxTrials; trial++)
+    {
+        buildInitialTourWalk(0);
+        runLinKernighanSearch(adjMat);
+
+        long long cost = calculateInternalTourCost(adjMat, 0);
+
+        if (cost < bestCost)
+        {
+            bestCost = cost;
+            bestPath = buildOutputPath(0);
+        }
+    }
     auto t4 = std::chrono::steady_clock::now();
 
     auto ms = [](auto a, auto b)
@@ -72,8 +87,8 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     std::cout << "Total: " << ms(t0, t4) << " ms\n";
 
     //Export the tour to the output format
-    _currSolution.path = buildOutputPath(0);
-    _currSolution.calculateDist(adjMat);
+    _currSolution.path = bestPath;
+    _currSolution.dist = bestCost;
 }
 
 long long TSPLKH::getTransformedCost(int i, int j, const std::vector<std::vector<int>>& adjMat) const
