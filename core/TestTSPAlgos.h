@@ -241,6 +241,7 @@ int testLKHInstance(const std::string& instance, int nRuns)
 {
 	//Init solver
 	LKHConfig config;
+	config.printExecTimes = true;
 	TSPLKH tsp = TSPLKH(config);
 
 	//Solve and display results

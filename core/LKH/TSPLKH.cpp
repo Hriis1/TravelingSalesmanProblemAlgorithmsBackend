@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <string>
 
 TSPLKH::TSPLKH(const LKHConfig& config, unsigned int seed)
     :TSPAlgo(seed), _config(config)
@@ -9,6 +10,30 @@ TSPLKH::TSPLKH(const LKHConfig& config, unsigned int seed)
 
 void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
 {
+    //Func to display time
+    auto ms = [](auto a, auto b)
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(b - a).count();
+    };
+
+    //time points
+    std::chrono::steady_clock::time_point t0, t1;
+
+    //funcs to measure time
+    auto execTimeStart = [&]()
+    {
+        if (_config.printExecTimes)
+            t0 = std::chrono::steady_clock::now();
+    };
+    auto execTimeEnd = [&](const std::string& label)
+    {
+        if (_config.printExecTimes)
+        {
+            t1 = std::chrono::steady_clock::now();
+            std::cout << label << ": " << ms(t0, t1) << " ms\n";
+        }
+    };
+
     //num cities
     int n = adjMat.size();
     assert(n >= 3);
@@ -42,49 +67,39 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     }
     _piSum = 0;
 
-    auto t0 = std::chrono::steady_clock::now();
 
     // Ascent and get the lower bound
+    execTimeStart();
     long long lowerBound = ascent(adjMat);
-    auto t1 = std::chrono::steady_clock::now();
+    execTimeEnd("Ascent");
+
 
     // Build alpha-nearness candidate sets from the final ascent 1-tree.
+    execTimeStart();
     generateAlphaCandidates(adjMat);
-    auto t2 = std::chrono::steady_clock::now();
+    execTimeEnd("Alpha candidates");
 
-    // Build the initial tour using LKH's default WALK-style candidate walk.
-    buildInitialTourWalk(0);
-    auto t3 = std::chrono::steady_clock::now();
-
-    // Run the variable-depth k-opt search.
+    //Do search trials
     long long bestCost = LLONG_MAX;
     std::vector<int> bestPath;
-
     for (int trial = 0; trial < _config.maxTrials; trial++)
     {
+        // Build the initial tour using LKH's default WALK-style candidate walk.
+        execTimeStart();
         buildInitialTourWalk(0);
+
+        // Run the variable-depth k-opt search.
         runLinKernighanSearch(adjMat);
+        execTimeEnd("Search trial " + std::to_string(trial));
 
+        //Update best cost/path
         long long cost = calculateInternalTourCost(adjMat, 0);
-
         if (cost < bestCost)
         {
             bestCost = cost;
             bestPath = buildOutputPath(0);
         }
     }
-    auto t4 = std::chrono::steady_clock::now();
-
-    auto ms = [](auto a, auto b)
-    {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(b - a).count();
-    };
-
-    std::cout << "Ascent: " << ms(t0, t1) << " ms\n";
-    std::cout << "Alpha candidates: " << ms(t1, t2) << " ms\n";
-    std::cout << "Initial tour: " << ms(t2, t3) << " ms\n";
-    std::cout << "LK search: " << ms(t3, t4) << " ms\n";
-    std::cout << "Total: " << ms(t0, t4) << " ms\n";
 
     //Export the tour to the output format
     _currSolution.path = bestPath;

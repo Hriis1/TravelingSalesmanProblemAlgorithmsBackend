@@ -18,7 +18,6 @@ struct LKHConfig
     int ascentCandidates = 50;          //How many candidates for the ascent trees
     int maxDepth = 5;                   //Maximum depth of the variable k-opt search
     int backtrackingLimit = 0;          //Limits how many failed alternatives are explored. 0 -> no limit
-    int runs = 1;                       //How many independent full runs to do
     int kickStrength = 4;               //How strong the perturbation is when stuck
 
     int tourSegmentSize = -1;           //Target cities per tour segment. -1 means sqrt(n)
@@ -29,6 +28,8 @@ struct LKHConfig
     long long precision = 100;          //precision for calculating transformed costs
 
     bool symmetrizeCandidates = true;   //Weather or not to make the candidate sets for each city symetric
+
+    bool printExecTimes = false;        //if true solver will print the execution times of different stages
 };
 
 
