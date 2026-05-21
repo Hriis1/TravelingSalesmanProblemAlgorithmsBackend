@@ -91,7 +91,7 @@ int testTSPAlgoRand(int nCities, int planeSize, int nRuns, bool doBruteForce, TS
 
 		//Output path and dist
 		int genDist = tspSolver->getCurrSolutionDist();
-		int nearestNeighborDist = TSPUtils::nearestNeighborDistance(adjMat, 0);
+		int nearestNeighborDist = TSPUtils::nearestNeighborDistance(adjMat, 0, true);
 		std::cout << "Path: " << std::endl;
 		outputPath(tspSolver->getCurrSolutionPath());
 		std::cout << "Dist: " << genDist << std::endl;
@@ -235,6 +235,17 @@ int testMMASInstance(const std::string& instance, int nIters, double alpha, doub
 
 	//Solve and display results
 	return testTSPAlgoInstance(instance, &tsp, "MMAS", nRuns);
+}
+
+int testLKHRand(int nCities, int planeSize, int nRuns, bool doBruteForce)
+{
+	//Init solver
+	LKHConfig config;
+	config.printExecTimes = true;
+	TSPLKH tsp = TSPLKH(config);
+
+	//Solve and display results
+	return testTSPAlgoRand(nCities, planeSize, nRuns, doBruteForce, &tsp, "LKH");
 }
 
 int testLKHInstance(const std::string& instance, int nRuns)

@@ -17,6 +17,7 @@ int main()
 	//testMMASInstance("brg180.tsp", 500, 2, 3, 0.1, 100, 10);
 
 	//Run LKH
+	//testLKHRand(1500, 10000, 10, false);
 	testLKHInstance("hk48.tsp", 10);
 
 
