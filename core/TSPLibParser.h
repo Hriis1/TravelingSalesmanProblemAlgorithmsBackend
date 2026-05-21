@@ -39,7 +39,7 @@ private:
     };
 
 public:
-    static TSPLibInstance parseFile(const std::string& filePath, int maxDimensionForAdjMatrix = 5000)
+    static TSPLibInstance parseFile(const std::string& filePath, int maxDimensionForAdjMatrix = 6000)
     {
         std::ifstream in(filePath);
         if (!in)

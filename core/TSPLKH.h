@@ -8,17 +8,21 @@
 #include "TSPSolution.h"
 #include "TSPUtils.h"
 
+enum LKHTrialTourGenType
+{
+    WALK = 1, KICK = 2
+};
 
 struct LKHConfig
 {
     // ASIGNED VALUES ARE JUST DEFAULTS
 
-    int maxTrials = 5;                 //How many attempts LKH makes
+    int maxTrials = 6;                  //How many attempts LKH makes
     int maxCandidates = 5;              //How many candidate edges each city considers
     int ascentCandidates = 50;          //How many candidates for the ascent trees
     int maxDepth = 5;                   //Maximum depth of the variable k-opt search
     int backtrackingLimit = 0;          //Limits how many failed alternatives are explored. 0 -> no limit
-    int kickStrength = 4;               //How strong the perturbation is when stuck
+    int kickStrength = 5;               //How strong the perturbation is when stuck
 
     int tourSegmentSize = -1;           //Target cities per tour segment. -1 means sqrt(n)
 
@@ -30,6 +34,8 @@ struct LKHConfig
     bool symmetrizeCandidates = true;   //Weather or not to make the candidate sets for each city symetric
 
     bool printExecTimes = false;        //if true solver will print the execution times of different stages
+
+    LKHTrialTourGenType trialTourGenType = LKHTrialTourGenType::KICK;    //WALK - random tour, KICK - kicked from prev best tour
 };
 
 

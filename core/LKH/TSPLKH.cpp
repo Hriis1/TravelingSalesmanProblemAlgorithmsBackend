@@ -87,6 +87,7 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
 
     //Build the first tour once; later trials start from kicked local optima.
     execTimeStart();
+    std::uniform_int_distribution<int> pickCity(0, n - 1);
     buildInitialTourWalk(0);
     execTimeEnd("Initial tour");
 
@@ -105,13 +106,21 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
             bestPath = buildOutputPath(0);
         }
 
-        //Perturb the current best tour before the next trial.
-        if (trial + 1 < maxTrials)
+        if (trial + 1 < maxTrials) //if its not last trial
         {
-            execTimeStart();
-            rebuildTourSegmentsFromPath(bestPath);
-            applyKSwapKick(_config.kickStrength);
-            execTimeEnd("Kick path - trial " + std::to_string(trial));
+            if (_config.trialTourGenType == LKHTrialTourGenType::KICK) //kick generation
+            {
+                //Perturb the current best tour before the next trial
+                execTimeStart();
+                rebuildTourSegmentsFromPath(bestPath);
+                applyKSwapKick(_config.kickStrength);
+                execTimeEnd("Kick path - trial " + std::to_string(trial));
+
+            }
+            else //walk generation
+            {
+                buildInitialTourWalk(pickCity(_gen));
+            }
         }
     }
 
