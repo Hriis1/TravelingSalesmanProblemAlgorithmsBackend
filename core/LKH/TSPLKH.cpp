@@ -105,10 +105,11 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
             bestPath = buildOutputPath(0);
         }
 
-        //Perturb the current local optimum before the next trial.
+        //Perturb the current best tour before the next trial.
         if (trial + 1 < maxTrials)
         {
             execTimeStart();
+            rebuildTourSegmentsFromPath(bestPath);
             applyKSwapKick(_config.kickStrength);
             execTimeEnd("Kick path - trial " + std::to_string(trial));
         }
