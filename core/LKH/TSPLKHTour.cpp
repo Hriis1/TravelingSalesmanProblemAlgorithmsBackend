@@ -1,5 +1,6 @@
 #include "../TSPLKH.h"
 #include <algorithm>
+#include <numeric>
 
 void TSPLKH::buildInitialTourNN(const std::vector<std::vector<int>>& adjMat, int startCity)
 {
@@ -445,6 +446,63 @@ void TSPLKH::rebuildSegmentIndexes()
             _cityOffsetInSegment[city] = offset;
         }
     }
+}
+
+void TSPLKH::applyKSwapKick(int k)
+{
+    const int n = (int)_citySegment.size();
+    assert(validateTourStructure(0));
+
+    //LKH's K-swap kick is defined for K >= 4.
+    if (k < 4 || n < 4)
+        return;
+
+    k = std::min(k, n);
+
+    std::vector<int> path = buildOutputPath(0);
+
+    //Sample K distinct break positions in the current tour.
+    std::vector<int> positions(n);
+    std::iota(positions.begin(), positions.end(), 0);
+    for (int i = 0; i < k; i++)
+    {
+        std::uniform_int_distribution<int> pick(i, n - 1);
+        const int selected = pick(_gen);
+        std::swap(positions[i], positions[selected]);
+    }
+
+    std::vector<int> breaks(positions.begin(), positions.begin() + k);
+    std::sort(breaks.begin(), breaks.end());
+
+    std::vector<int> kickedPath;
+    kickedPath.reserve(n);
+
+    auto appendBlock = [&](int blockIndex)
+    {
+        //Block i starts after break i and ends at the next break city.
+        const int start = (breaks[blockIndex] + 1) % n;
+        const int end = breaks[(blockIndex + 1) % k];
+
+        int index = start;
+        while (true)
+        {
+            kickedPath.push_back(path[index]);
+            if (index == end)
+                break;
+            index = (index + 1) % n;
+        }
+    };
+
+    //LKH reconnects s[(i + 2) % K] to old successor of s[i].
+    //In block form this means: block 0, then K-1, K-2, ..., 1.
+    appendBlock(0);
+    for (int blockIndex = k - 1; blockIndex >= 1; blockIndex--)
+        appendBlock(blockIndex);
+
+    assert((int)kickedPath.size() == n);
+
+    //Store the kicked tour back in the segmented representation.
+    rebuildTourSegmentsFromPath(kickedPath);
 }
 
 std::vector<int> TSPLKH::getSegmentCitiesInTourOrder(const LKHTourSegment& segment) const

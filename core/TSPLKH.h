@@ -13,7 +13,7 @@ struct LKHConfig
 {
     // ASIGNED VALUES ARE JUST DEFAULTS
 
-    int maxTrials = 4;                 //How many attempts LKH makes
+    int maxTrials = 5;                 //How many attempts LKH makes
     int maxCandidates = 5;              //How many candidate edges each city considers
     int ascentCandidates = 50;          //How many candidates for the ascent trees
     int maxDepth = 5;                   //Maximum depth of the variable k-opt search
@@ -249,6 +249,8 @@ private:
     void rebuildTourSegmentsFromPath(const std::vector<int>& path); //builds the segmented tour representation from a vec path
 
     void rebuildSegmentIndexes();
+
+    void applyKSwapKick(int k); //perturbs the current tour using LKH's K-swap kick
 
     std::vector<int> getSegmentCitiesInTourOrder(const LKHTourSegment& segment) const;
 

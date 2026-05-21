@@ -1,5 +1,6 @@
 #include "../TSPLKH.h"
 
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -80,15 +81,19 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
     execTimeEnd("Alpha candidates");
 
     //Do search trials
+    const int maxTrials = std::max(1, _config.maxTrials);
     long long bestCost = LLONG_MAX;
     std::vector<int> bestPath;
-    for (int trial = 0; trial < _config.maxTrials; trial++)
-    {
-        // Build the initial tour using LKH's default WALK-style candidate walk.
-        execTimeStart();
-        buildInitialTourWalk(0);
 
+    //Build the first tour once; later trials start from kicked local optima.
+    execTimeStart();
+    buildInitialTourWalk(0);
+    execTimeEnd("Initial tour");
+
+    for (int trial = 0; trial < maxTrials; trial++)
+    {
         // Run the variable-depth k-opt search.
+        execTimeStart();
         runLinKernighanSearch(adjMat);
         execTimeEnd("Search trial " + std::to_string(trial));
 
@@ -98,6 +103,14 @@ void TSPLKH::solve(const std::vector<std::vector<int>>& adjMat)
         {
             bestCost = cost;
             bestPath = buildOutputPath(0);
+        }
+
+        //Perturb the current local optimum before the next trial.
+        if (trial + 1 < maxTrials)
+        {
+            execTimeStart();
+            applyKSwapKick(_config.kickStrength);
+            execTimeEnd("Kick path - trial " + std::to_string(trial));
         }
     }
 
