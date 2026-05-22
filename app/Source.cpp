@@ -18,7 +18,7 @@ int main()
 
 	//Run LKH
 	//testLKHRand(1500, 10000, 10, false);
-	testLKHInstance("hk48.tsp", 10);
+	testLKHInstance("u2319.tsp", 3);
 
 
 	std::cin.get();
