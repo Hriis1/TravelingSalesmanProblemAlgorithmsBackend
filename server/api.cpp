@@ -16,6 +16,16 @@ std::string buildJson(const std::vector<std::pair<std::string, nlohmann::json>>&
     return j.dump();
 }
 
+std::string buildJson(std::initializer_list<std::pair<std::string, nlohmann::json>> data)
+{
+    nlohmann::json j;
+
+    for (const auto& param : data)
+        j[param.first] = param.second;
+
+    return j.dump();
+}
+
 void solveTSP(const httplib::Request& req, httplib::Response& res)
 {
     auto body = buildJson({
