@@ -6,7 +6,8 @@
 #include "httplib.h"
 #include "json.hpp"
 
-std::string buildJson(const std::vector<std::pair<std::string, nlohmann::json>>& data)
+template <typename Container>
+std::string buildJsonFromPairs(const Container& data)
 {
     nlohmann::json j;
 
@@ -16,14 +17,14 @@ std::string buildJson(const std::vector<std::pair<std::string, nlohmann::json>>&
     return j.dump();
 }
 
+std::string buildJson(const std::vector<std::pair<std::string, nlohmann::json>>& data)
+{
+    return buildJsonFromPairs(data);
+}
+
 std::string buildJson(std::initializer_list<std::pair<std::string, nlohmann::json>> data)
 {
-    nlohmann::json j;
-
-    for (const auto& param : data)
-        j[param.first] = param.second;
-
-    return j.dump();
+    return buildJsonFromPairs(data);
 }
 
 void solveTSP(const httplib::Request& req, httplib::Response& res)
