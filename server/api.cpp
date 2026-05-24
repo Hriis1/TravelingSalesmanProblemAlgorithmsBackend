@@ -27,6 +27,12 @@ std::string buildJson(std::initializer_list<std::pair<std::string, nlohmann::jso
     return buildJsonFromPairs(data);
 }
 
+void sendResponse(int status, const std::string& body, httplib::Response& res)
+{
+    res.status = status;
+    res.set_content(body, "application/json");
+}
+
 void solveTSP(const httplib::Request& req, httplib::Response& res)
 {
     auto body = buildJson({
@@ -43,7 +49,7 @@ int main()
 {
     httplib::Server server;
 
-    server.Get("/solveTSP", solveTSP);
+    server.Post("/solveTSP", solveTSP);
 
     std::cout << "Server running on http://localhost:8080\n";
     server.listen("0.0.0.0", 8080);
