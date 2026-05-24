@@ -16,6 +16,17 @@ namespace TSPUtils
         ClusteredDeceptive
     };
 
+    inline std::string getSourceDir()
+    {
+        std::string file = __FILE__;
+
+        size_t pos = file.find_last_of("\\/");
+        if (pos == std::string::npos)
+            return "";
+
+        return file.substr(0, pos);
+    }
+
     inline int distRoundedInt(double x1, double y1, double x2, double y2)
     {
         const double dx = x1 - x2;

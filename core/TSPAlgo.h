@@ -12,6 +12,8 @@ public:
 	{
 	}
 
+	virtual ~TSPAlgo() = default;
+
 	void reseed(unsigned int seed = std::random_device{}())
 	{
 		_gen.seed(seed);

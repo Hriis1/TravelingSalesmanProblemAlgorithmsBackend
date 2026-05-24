@@ -12,18 +12,6 @@
 #include "../core/TSPUtils.h"
 #include "../core/TSPLibParser.h"
 
-
-std::string getSourceDir()
-{
-	std::string file = __FILE__;
-
-	size_t pos = file.find_last_of("\\/");
-	if (pos == std::string::npos)
-		return "";
-
-	return file.substr(0, pos);
-}
-
 void outputPath(const std::vector<int>& path)
 {
 	const int sz = path.size();
@@ -146,7 +134,7 @@ int testTSPAlgoInstance(const std::string& tspInstance, TSPAlgo* tspSolver, cons
 	try
 	{
 		//Init the instance
-		std::string sourceDir = getSourceDir();
+		std::string sourceDir = TSPUtils::getSourceDir();
 		std::string path = sourceDir + "/../tsplib-master/" + tspInstance;
 		auto instance = TSPLibParser::parseFile(path);
 
