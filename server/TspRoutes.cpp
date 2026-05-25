@@ -13,9 +13,7 @@ namespace
 
         //Instance errors
         if (instance.adjMat.size() == 0 || instance.adjMat.size() != instance.adjMat[0].size())
-        {
             throw TspApiError(400, "Invalid TSPLIB instance matrix!");
-        }
 
         //Run the solver
         int nearestNeighborDist = TSPUtils::nearestNeighborDistance(instance.adjMat, 0);
@@ -29,7 +27,72 @@ namespace
 
     void solveTSPCustom(const httplib::Request& req, httplib::Response& res, const nlohmann::json& reqBody, TSPAlgo& tspSolver)
     {
+        const int minCities = 5;
+        const int maxCities = 3000;
 
+        const auto& custom = reqBody["customTSP"];
+
+        //Num cities exists
+        if (!custom.contains("numCities"))
+            throw TspApiError(400, "Missing field: customTSP.numCities");
+
+        //cities exist
+        if (!custom.contains("cities"))
+            throw TspApiError(400, "Missing field: customTSP.cities");
+
+        const auto& numCitiesJson = reqBody["customTSP"]["numCities"];
+        const auto& cities = reqBody["customTSP"]["cities"];
+
+        //numCities is an int
+        if (!numCitiesJson.is_number_integer())
+            throw TspApiError(400, "numCities must be an integer");
+
+        //numCities between min and max cities
+        int numCities = numCitiesJson.get<int>();
+        if (numCities < minCities || numCities > maxCities)
+            throw TspApiError(400, "numCities must be between 5 and 3000");
+
+        //count of cities must match numCities
+        if (!cities.is_array() || cities.size() != numCities)
+            throw TspApiError(400, "cities must be an array of the same size as numCities");
+
+        //parse cities to adj matrix
+        const auto& cities = reqBody["customTSP"]["cities"];
+        std::vector<std::vector<double>> coords = jsonCitiesToCoords(cities);
+        std::vector<std::vector<int>> adjMat = TSPUtils::buildAdjMatrixFromCoords(coords);
+
+        //Run the solver
+        int nearestNeighborDist = TSPUtils::nearestNeighborDistance(adjMat, 0);
+        tspSolver.solve(adjMat);
+
+        //Send response
+        tspapiutils::sendResponse(res, 200,
+            tspapiutils::buildJson({ {"success", true}, {"path", tspSolver.getCurrSolutionPath()}, {"nCities", adjMat.size()},
+                {"dist", tspSolver.getCurrSolutionDist()}, {"nnDist", nearestNeighborDist}, {"optimalDist", -1} }));
+    }
+
+    std::vector<std::vector<double>> jsonCitiesToCoords(const nlohmann::json& cities)
+    {
+        int n = static_cast<int>(cities.size());
+
+        std::vector<std::vector<double>> coords;
+        coords.reserve(n);
+
+        for (const auto& city : cities)
+        {
+            if (!city.is_array() || city.size() != 2 ||
+                !city[0].is_number() || !city[1].is_number())
+            {
+                throw TspApiError(400, "Each city must be an array: [x, y]");
+            }
+
+            coords.push_back({
+                city[0].get<double>(),
+                city[1].get<double>()
+                });
+        }
+
+        return coords;
     }
 }
 
@@ -47,9 +110,8 @@ void solveTSP(const httplib::Request& req, httplib::Response& res)
         }
 
         //Invalid Algorithm param 
-        if (!bodyJson.contains("algorithm") || !bodyJson["algorithm"].is_string()) {
+        if (!bodyJson.contains("algorithm") || !bodyJson["algorithm"].is_string())
             throw TspApiError(400, "Missing or invalid field: algorithm");
-        }
 
         //Init solver
         std::unique_ptr<TSPAlgo> tspSolver;
@@ -88,7 +150,7 @@ void solveTSP(const httplib::Request& req, httplib::Response& res)
             solveTSPInstance(req, res, bodyJson, *tspSolver);
             return;
         }
-        else if (bodyJson.contains("custom")) //is custom
+        else if (bodyJson.contains("customTSP") && bodyJson["customTSP"].is_object()) //is custom
         {
             //Solve custom tsp
             solveTSPCustom(req, res, bodyJson, *tspSolver);
@@ -96,7 +158,7 @@ void solveTSP(const httplib::Request& req, httplib::Response& res)
         }
         else //No instance or custom sent in req
         {
-            throw TspApiError(400, "No TSP was sent for solving");
+            throw TspApiError(400, "No valid TSP was sent for solving");
         }
     }
     catch (const TspApiError& e)
