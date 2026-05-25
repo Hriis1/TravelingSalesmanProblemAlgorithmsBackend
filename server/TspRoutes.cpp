@@ -26,6 +26,11 @@ namespace
             tspapiutils::buildJson({ {"success", true}, {"path", tspSolver.getCurrSolutionPath()}, {"nCities", instance.adjMat.size()},
                 {"dist", tspSolver.getCurrSolutionDist()}, {"nnDist", nearestNeighborDist}, {"optimalDist", instance.optimalDist} }));
     }
+
+    void solveTSPCustom(const httplib::Request& req, httplib::Response& res, const nlohmann::json& reqBody, TSPAlgo& tspSolver)
+    {
+
+    }
 }
 
 void solveTSP(const httplib::Request& req, httplib::Response& res)
@@ -73,14 +78,25 @@ void solveTSP(const httplib::Request& req, httplib::Response& res)
         }
         else
         {
-            throw TspApiError(400, "algorithm not recognized");
+            throw TspApiError(400, "Algorithm not recognized");
         }
 
-        //Solve instance
-        if (bodyJson.contains("instance") && bodyJson["instance"].is_string()) {
-
+        
+        //Check for instance or custom
+        if (bodyJson.contains("instance") && bodyJson["instance"].is_string()) { //is instance
+            //Solve instance
             solveTSPInstance(req, res, bodyJson, *tspSolver);
             return;
+        }
+        else if (bodyJson.contains("custom")) //is custom
+        {
+            //Solve custom tsp
+            solveTSPCustom(req, res, bodyJson, *tspSolver);
+            return;
+        }
+        else //No instance or custom sent in req
+        {
+            throw TspApiError(400, "No TSP was sent for solving");
         }
     }
     catch (const TspApiError& e)
