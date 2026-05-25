@@ -7,6 +7,7 @@
 #include "json.hpp"
 
 #include "TspApiUtils.h"
+#include "TspApiError.h"
 #include "../core/TSPUtils.h"
 #include "../core/TSPLibParser.h"
 

@@ -14,7 +14,7 @@ namespace
         //Instance errors
         if (instance.adjMat.size() == 0 || instance.adjMat.size() != instance.adjMat[0].size())
         {
-            throw std::runtime_error("Invalid TSPLIB instance matrix!");
+            throw TspApiError(400, "Invalid TSPLIB instance matrix!");
         }
 
         //Run the solver
@@ -30,20 +30,20 @@ namespace
 
 void solveTSP(const httplib::Request& req, httplib::Response& res)
 {
-    nlohmann::json bodyJson;
-
     try
     {
+        nlohmann::json bodyJson;
+
         try {
             bodyJson = nlohmann::json::parse(req.body);
         }
         catch (...) { //Body is invalid json
-            throw std::runtime_error("Invalid JSON body");
+            throw TspApiError(400, "Invalid JSON body");
         }
 
         //Invalid Algorithm param 
         if (!bodyJson.contains("algorithm") || !bodyJson["algorithm"].is_string()) {
-            throw std::runtime_error("Missing or invalid field: algorithm");
+            throw TspApiError(400, "Missing or invalid field: algorithm");
         }
 
         //Init solver
@@ -73,7 +73,7 @@ void solveTSP(const httplib::Request& req, httplib::Response& res)
         }
         else
         {
-            throw std::runtime_error("algorithm not recognized");
+            throw TspApiError(400, "algorithm not recognized");
         }
 
         //Solve instance
@@ -83,12 +83,16 @@ void solveTSP(const httplib::Request& req, httplib::Response& res)
             return;
         }
     }
+    catch (const TspApiError& e)
+    {
+        //Handled exceptions
+        tspapiutils::sendResponse(res, e.statusCode,
+            tspapiutils::buildJson({ {"success", false}, {"error", e.what()} }));
+    }
     catch (const std::exception& e)
     {
-        //Catch errors
-        std::cerr << e.what() << std::endl;
-        tspapiutils::sendResponse(res, 400,
+        //Unhandled exceptions
+        tspapiutils::sendResponse(res, 500,
             tspapiutils::buildJson({ {"success", false}, {"error", e.what()} }));
-        return;
     }
 }
