@@ -82,14 +82,11 @@ namespace
         const auto& numCitiesJson = reqBody["customTSP"]["numCities"];
         const auto& cities = reqBody["customTSP"]["cities"];
 
-        //numCities is an int
-        if (!numCitiesJson.is_number_integer())
-            throw TspApiError(400, "numCities must be an integer");
+        //numCities is an int between min and max cities
+        if (!numCitiesJson.is_number_integer() || numCitiesJson < minCities || numCitiesJson > maxCities)
+            throw TspApiError(400, "numCities must be an integer between " +  std::to_string(minCities) + " and " + std::to_string(maxCities));
 
-        //numCities between min and max cities
         int numCities = numCitiesJson.get<int>();
-        if (numCities < minCities || numCities > maxCities)
-            throw TspApiError(400, "numCities must be between 5 and 3000");
 
         //count of cities must match numCities
         if (!cities.is_array() || cities.size() != numCities)
