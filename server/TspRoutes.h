@@ -2,6 +2,7 @@
 #include <utility>
 #include <string>
 #include <vector>
+#include <regex>
 
 #include "httplib.h"
 #include "json.hpp"

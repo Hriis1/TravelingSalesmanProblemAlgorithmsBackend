@@ -32,6 +32,12 @@ namespace
         //Init instance
         std::string sourceDir = TSPUtils::getSourceDir();
         const std::string& tspInstance = reqBody["instance"];
+
+        //validate tsp instance
+        static const std::regex validInstanceName(R"(^[A-Za-z0-9_-]+$)");
+        if (!std::regex_match(tspInstance, validInstanceName))
+            throw TspApiError(400, "Invalid TSPLIB instance name");
+
         std::string path = sourceDir + "/../tsplib-master/" + tspInstance + ".tsp";
         auto instance = [&]() {
             try
