@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cctype>
 #include <fstream>
@@ -35,7 +36,8 @@ private:
     {
         None,
         NodeCoord,
-        EdgeWeight
+        EdgeWeight,
+        DisplayData
     };
 
 public:
@@ -129,6 +131,105 @@ public:
         return instance;
     }
 
+    static std::vector<std::array<int, 2>> parseFileToCoords(const std::string& filePath)
+    {
+        std::ifstream in(filePath);
+        if (!in)
+            throw std::runtime_error("Could not open TSPLIB file: " + filePath);
+
+        TSPLibInstance instance;
+        std::vector<std::array<int, 2>> coords;
+        std::vector<bool> seenCoords;
+
+        Section section = Section::None;
+        std::string coordSectionName;
+        std::string line;
+
+        while (std::getline(in, line))
+        {
+            line = trim(line);
+            if (line.empty())
+                continue;
+
+            const std::string upperLine = toUpper(line);
+            if (upperLine == "EOF")
+                break;
+
+            if (upperLine == "NODE_COORD_SECTION")
+            {
+                section = Section::NodeCoord;
+                coordSectionName = "NODE_COORD_SECTION";
+                coords.clear();
+                seenCoords.clear();
+                continue;
+            }
+
+            if (upperLine == "DISPLAY_DATA_SECTION")
+            {
+                if (coordSectionName.empty())
+                {
+                    section = Section::DisplayData;
+                    coordSectionName = "DISPLAY_DATA_SECTION";
+                }
+                else
+                {
+                    section = Section::None;
+                }
+
+                continue;
+            }
+
+            if (upperLine == "EDGE_WEIGHT_SECTION")
+            {
+                section = Section::EdgeWeight;
+                continue;
+            }
+
+            if (endsWith(upperLine, "_SECTION"))
+            {
+                section = Section::None;
+                continue;
+            }
+
+            if (section == Section::NodeCoord || section == Section::DisplayData)
+            {
+                if (instance.dimension <= 0)
+                    throw std::runtime_error("TSPLIB file is missing a valid DIMENSION before coordinates: " + filePath);
+
+                readIntCoordLine(line, instance.dimension, coords, seenCoords);
+                continue;
+            }
+
+            if (section == Section::EdgeWeight)
+                continue;
+
+            readHeaderLine(line, instance);
+        }
+
+        if (instance.dimension <= 0)
+            throw std::runtime_error("TSPLIB file is missing a valid DIMENSION: " + filePath);
+
+        if (coordSectionName.empty())
+            throw std::runtime_error("TSPLIB instance has no coordinate section: " + filePath);
+
+        if ((int)coords.size() != instance.dimension)
+            throw std::runtime_error("TSPLIB coordinate count does not match DIMENSION in: " + filePath);
+
+        for (int i = 0; i < instance.dimension; ++i)
+        {
+            if (!seenCoords[i])
+            {
+                throw std::runtime_error(
+                    "TSPLIB coordinate section is missing node "
+                    + std::to_string(i + 1)
+                    + " in: "
+                    + filePath);
+            }
+        }
+
+        return coords;
+    }
+
     static int knownOptimalDistance(const std::string& instanceName)
     {
         const auto& optima = knownOptima();
@@ -192,6 +293,29 @@ private:
             points.assign(dimension, Point());
 
         points[id - 1] = { x, y };
+    }
+
+    static void readIntCoordLine(const std::string& line, int dimension, std::vector<std::array<int, 2>>& coords, std::vector<bool>& seenCoords)
+    {
+        std::istringstream iss(line);
+        int id = 0;
+        double x = 0.0;
+        double y = 0.0;
+
+        if (!(iss >> id >> x >> y))
+            return;
+
+        if (id <= 0 || id > dimension)
+            throw std::runtime_error("TSPLIB node id is outside DIMENSION.");
+
+        if (coords.empty())
+        {
+            coords.assign(dimension, { 0, 0 });
+            seenCoords.assign(dimension, false);
+        }
+
+        coords[id - 1] = { coordToInt(x), coordToInt(y) };
+        seenCoords[id - 1] = true;
     }
 
     static void readIntLine(const std::string& line, std::vector<int>& values)
@@ -328,6 +452,16 @@ private:
     static int nint(double value)
     {
         return (int)(value + 0.5);
+    }
+
+    static int coordToInt(double value)
+    {
+        const double rounded = std::round(value);
+
+        if (rounded < (double)std::numeric_limits<int>::min() || rounded > (double)std::numeric_limits<int>::max())
+            throw std::runtime_error("TSPLIB coordinate is outside int range.");
+
+        return (int)rounded;
     }
 
     static int geoDistance(const Point& a, const Point& b)
