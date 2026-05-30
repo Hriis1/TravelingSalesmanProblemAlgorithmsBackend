@@ -107,7 +107,8 @@ namespace
     }
 }
 
-void solveTSP(const httplib::Request& req, httplib::Response& res)
+
+void tspApiRoutes::solveTSP(const httplib::Request& req, httplib::Response& res)
 {
     try
     {

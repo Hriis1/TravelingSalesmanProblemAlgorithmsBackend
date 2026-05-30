@@ -16,5 +16,6 @@
 #include "../core/TSPMMAS.h"
 #include "../core/TSPLKH.h"
 
-
-void solveTSP(const httplib::Request& req, httplib::Response& res);
+namespace tspApiRoutes {
+	void solveTSP(const httplib::Request& req, httplib::Response& res);
+}
