@@ -1,6 +1,7 @@
 #pragma once
 #include <utility>
 #include <string>
+#include <array>
 #include <vector>
 #include <regex>
 
@@ -16,6 +17,8 @@
 #include "../core/TSPMMAS.h"
 #include "../core/TSPLKH.h"
 
-namespace tspApiRoutes {
+namespace tspapiroutes {
 	void solveTSP(const httplib::Request& req, httplib::Response& res);
+
+	void getTspInstanceCoords(const httplib::Request& req, httplib::Response& res);
 }

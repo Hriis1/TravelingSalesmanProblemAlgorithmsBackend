@@ -108,7 +108,7 @@ namespace
 }
 
 
-void tspApiRoutes::solveTSP(const httplib::Request& req, httplib::Response& res)
+void tspapiroutes::solveTSP(const httplib::Request& req, httplib::Response& res)
 {
     try
     {
@@ -172,6 +172,58 @@ void tspApiRoutes::solveTSP(const httplib::Request& req, httplib::Response& res)
         {
             throw TspApiError(400, "No valid TSP was sent for solving");
         }
+    }
+    catch (const TspApiError& e)
+    {
+        //Handled exceptions
+        tspapiutils::sendResponse(res, e.statusCode,
+            tspapiutils::buildJson({ {"success", false}, {"error", e.what()} }));
+    }
+    catch (const std::exception& e)
+    {
+        //Unhandled exceptions
+        tspapiutils::sendResponse(res, 500,
+            tspapiutils::buildJson({ {"success", false}, {"error", e.what()} }));
+    }
+}
+
+void tspapiroutes::getTspInstanceCoords(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        if (!req.has_param("instance") || req.get_param_value("instance").empty())
+        {
+            throw TspApiError(400, "Missing or invalid field: instance");
+        }
+
+        //Init instance
+        std::string sourceDir = TSPUtils::getSourceDir();
+        const std::string tspInstance = req.get_param_value("instance");
+
+        //validate tsp instance
+        static const std::regex validInstanceName(R"(^[A-Za-z0-9_-]+$)");
+        if (!std::regex_match(tspInstance, validInstanceName))
+            throw TspApiError(400, "Invalid TSPLIB instance name");
+
+        std::string path = sourceDir + "/../tsplib-master/" + tspInstance + ".tsp";
+        std::vector<std::array<int, 2>> coords = [&]() {
+            try
+            {
+                return TSPLibParser::parseFileToCoords(path);
+            }
+            catch (const std::exception& e)
+            {
+                throw TspApiError(400, e.what());
+            }
+        }();
+
+        //coords errors
+        if(coords.size() == 0)
+            throw TspApiError(400, "Invalid TSPLIB instance coords!");
+
+        //Success response
+        tspapiutils::sendResponse(res, 200,
+            tspapiutils::buildJson({ {"success", true}, {"coords", coords} }));
     }
     catch (const TspApiError& e)
     {
