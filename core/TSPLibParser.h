@@ -81,6 +81,18 @@ public:
         }
     }
 
+    static TSPLibInstance parseString(const std::string& content, int maxDimensionForAdjMatrix = 6000)
+    {
+        std::istringstream input(content);
+        return parseStream(input, maxDimensionForAdjMatrix);
+    }
+
+    static std::vector<std::array<int, 2>> parseStringToCoords(const std::string& content)
+    {
+        std::istringstream input(content);
+        return parseStreamToCoords(input);
+    }
+
     static int knownOptimalDistance(const std::string& instanceName)
     {
         const auto& optima = knownOptima();
