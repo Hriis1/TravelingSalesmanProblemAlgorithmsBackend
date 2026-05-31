@@ -48,6 +48,55 @@ public:
             throw std::runtime_error("Could not open TSPLIB file: " + filePath);
 
         TSPLibInstance instance;
+        try
+        {
+            instance = parseStream(in, maxDimensionForAdjMatrix);
+        }
+        catch (const std::runtime_error& e)
+        {
+            throw std::runtime_error(formatParseFileError(e.what(), filePath));
+        }
+
+        if (instance.name.empty())
+            instance.name = fileNameWithoutExtension(filePath);
+
+        instance.optimalDist = knownOptimalDistance(instance.name);
+
+        return instance;
+    }
+
+    static std::vector<std::array<int, 2>> parseFileToCoords(const std::string& filePath)
+    {
+        std::ifstream in(filePath);
+        if (!in)
+            throw std::runtime_error("Could not open TSPLIB file: " + filePath);
+
+        try
+        {
+            return parseStreamToCoords(in);
+        }
+        catch (const std::runtime_error& e)
+        {
+            throw std::runtime_error(formatParseFileToCoordsError(e.what(), filePath));
+        }
+    }
+
+    static int knownOptimalDistance(const std::string& instanceName)
+    {
+        const auto& optima = knownOptima();
+        const std::string key = toLower(fileNameWithoutExtension(instanceName));
+        const auto it = optima.find(key);
+
+        if (it == optima.end())
+            return -1;
+
+        return it->second;
+    }
+
+private:
+    static TSPLibInstance parseStream(std::istream& in, int maxDimensionForAdjMatrix)
+    {
+        TSPLibInstance instance;
         std::vector<Point> points;
         std::vector<int> edgeWeights;
 
@@ -97,11 +146,8 @@ public:
             readHeaderLine(line, instance);
         }
 
-        if (instance.name.empty())
-            instance.name = fileNameWithoutExtension(filePath);
-
         if (instance.dimension <= 0)
-            throw std::runtime_error("TSPLIB file is missing a valid DIMENSION: " + filePath);
+            throw std::runtime_error("TSPLIB file is missing a valid DIMENSION.");
 
         if (maxDimensionForAdjMatrix > 0 && instance.dimension > maxDimensionForAdjMatrix)
         {
@@ -114,7 +160,6 @@ public:
 
         instance.edgeWeightType = normalizeTsplibToken(instance.edgeWeightType);
         instance.edgeWeightFormat = normalizeTsplibToken(instance.edgeWeightFormat);
-        instance.optimalDist = knownOptimalDistance(instance.name);
 
         if (instance.edgeWeightType == "EXPLICIT")
         {
@@ -123,7 +168,7 @@ public:
         else
         {
             if ((int)points.size() != instance.dimension)
-                throw std::runtime_error("TSPLIB coordinate count does not match DIMENSION in: " + filePath);
+                throw std::runtime_error("TSPLIB coordinate count does not match DIMENSION.");
 
             instance.adjMat = buildCoordinateMatrix(instance.dimension, instance.edgeWeightType, points);
         }
@@ -131,12 +176,8 @@ public:
         return instance;
     }
 
-    static std::vector<std::array<int, 2>> parseFileToCoords(const std::string& filePath)
+    static std::vector<std::array<int, 2>> parseStreamToCoords(std::istream& in)
     {
-        std::ifstream in(filePath);
-        if (!in)
-            throw std::runtime_error("Could not open TSPLIB file: " + filePath);
-
         TSPLibInstance instance;
         std::vector<std::array<int, 2>> coords;
         std::vector<bool> seenCoords;
@@ -194,7 +235,7 @@ public:
             if (section == Section::NodeCoord || section == Section::DisplayData)
             {
                 if (instance.dimension <= 0)
-                    throw std::runtime_error("TSPLIB file is missing a valid DIMENSION before coordinates: " + filePath);
+                    throw std::runtime_error("TSPLIB file is missing a valid DIMENSION before coordinates.");
 
                 readIntCoordLine(line, instance.dimension, coords, seenCoords);
                 continue;
@@ -207,13 +248,13 @@ public:
         }
 
         if (instance.dimension <= 0)
-            throw std::runtime_error("TSPLIB file is missing a valid DIMENSION: " + filePath);
+            throw std::runtime_error("TSPLIB file is missing a valid DIMENSION.");
 
         if (coordSectionName.empty())
-            throw std::runtime_error("TSPLIB instance has no coordinate section: " + filePath);
+            throw std::runtime_error("TSPLIB instance has no coordinate section.");
 
         if ((int)coords.size() != instance.dimension)
-            throw std::runtime_error("TSPLIB coordinate count does not match DIMENSION in: " + filePath);
+            throw std::runtime_error("TSPLIB coordinate count does not match DIMENSION.");
 
         for (int i = 0; i < instance.dimension; ++i)
         {
@@ -221,28 +262,44 @@ public:
             {
                 throw std::runtime_error(
                     "TSPLIB coordinate section is missing node "
-                    + std::to_string(i + 1)
-                    + " in: "
-                    + filePath);
+                    + std::to_string(i + 1));
             }
         }
 
         return coords;
     }
 
-    static int knownOptimalDistance(const std::string& instanceName)
+    static std::string formatParseFileError(const std::string& error, const std::string& filePath)
     {
-        const auto& optima = knownOptima();
-        const std::string key = toLower(fileNameWithoutExtension(instanceName));
-        const auto it = optima.find(key);
+        if (error == "TSPLIB file is missing a valid DIMENSION.")
+            return "TSPLIB file is missing a valid DIMENSION: " + filePath;
 
-        if (it == optima.end())
-            return -1;
+        if (error == "TSPLIB coordinate count does not match DIMENSION.")
+            return "TSPLIB coordinate count does not match DIMENSION in: " + filePath;
 
-        return it->second;
+        return error;
     }
 
-private:
+    static std::string formatParseFileToCoordsError(const std::string& error, const std::string& filePath)
+    {
+        if (error == "TSPLIB file is missing a valid DIMENSION before coordinates.")
+            return "TSPLIB file is missing a valid DIMENSION before coordinates: " + filePath;
+
+        if (error == "TSPLIB file is missing a valid DIMENSION.")
+            return "TSPLIB file is missing a valid DIMENSION: " + filePath;
+
+        if (error == "TSPLIB instance has no coordinate section.")
+            return "TSPLIB instance has no coordinate section: " + filePath;
+
+        if (error == "TSPLIB coordinate count does not match DIMENSION.")
+            return "TSPLIB coordinate count does not match DIMENSION in: " + filePath;
+
+        const std::string missingNodePrefix = "TSPLIB coordinate section is missing node ";
+        if (error.compare(0, missingNodePrefix.size(), missingNodePrefix) == 0)
+            return error + " in: " + filePath;
+
+        return error;
+    }
     static void readHeaderLine(const std::string& line, TSPLibInstance& instance)
     {
         std::string key;
