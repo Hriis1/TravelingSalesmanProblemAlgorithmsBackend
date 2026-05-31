@@ -21,4 +21,6 @@ namespace tspapiroutes {
 	void solveTSP(const httplib::Request& req, httplib::Response& res);
 
 	void getTspInstanceCoords(const httplib::Request& req, httplib::Response& res);
+
+	void getTspCustomFileCoords(const httplib::Request& req, httplib::Response& res);
 }

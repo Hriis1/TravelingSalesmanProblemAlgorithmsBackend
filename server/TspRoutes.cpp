@@ -277,3 +277,60 @@ void tspapiroutes::getTspInstanceCoords(const httplib::Request& req, httplib::Re
             tspapiutils::buildJson({ {"success", false}, {"error", e.what()} }));
     }
 }
+
+void tspapiroutes::getTspCustomFileCoords(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        nlohmann::json bodyJson;
+        try {
+            bodyJson = nlohmann::json::parse(req.body);
+        }
+        catch (...) { //Body is invalid json
+            throw TspApiError(400, "Invalid JSON body");
+        }
+
+        if (!bodyJson.contains("customTSPFile") || !bodyJson["customTSPFile"].is_string())
+            throw TspApiError(400, "Missing or invalid field: customTSPFile");
+
+        const std::string content = bodyJson["customTSPFile"].get<std::string>();
+
+        if (content.empty())
+            throw TspApiError(400, "Missing TSP file content");
+
+        const size_t maxTspFileBytes = 5 * 1024 * 1024; // 5MB
+        if (content.size() > maxTspFileBytes)
+            throw TspApiError(400, "TSP file content is too large. Max: 5MB");
+
+        std::vector<std::array<int, 2>> coords = [&]() {
+            try
+            {
+                return TSPLibParser::parseStringToCoords(content);
+            }
+            catch (const std::exception& e)
+            {
+                throw TspApiError(400, e.what());
+            }
+        }();
+
+        //coords errors
+        if (coords.size() == 0)
+            throw TspApiError(400, "TSP file could not be parsed to coords!");
+
+        //Success response
+        tspapiutils::sendResponse(res, 200,
+            tspapiutils::buildJson({ {"success", true}, {"coords", coords} }));
+    }
+    catch (const TspApiError& e)
+    {
+        //Handled exceptions
+        tspapiutils::sendResponse(res, e.statusCode,
+            tspapiutils::buildJson({ {"success", false}, {"error", e.what()} }));
+    }
+    catch (const std::exception& e)
+    {
+        //Unhandled exceptions
+        tspapiutils::sendResponse(res, 500,
+            tspapiutils::buildJson({ {"success", false}, {"error", e.what()} }));
+    }
+}

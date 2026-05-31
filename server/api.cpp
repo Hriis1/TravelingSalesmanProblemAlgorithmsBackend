@@ -9,6 +9,9 @@ int main()
     //Get instance coords
     server.Get("/getTspInstanceCoords", tspapiroutes::getTspInstanceCoords);
 
+    //Get coords from custom tsp file
+    server.Post("/getTspCustomFileCoords", tspapiroutes::getTspCustomFileCoords);
+
     //Solve tsp
     server.Post("/solveTSP", tspapiroutes::solveTSP);
 
