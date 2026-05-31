@@ -105,8 +105,41 @@ namespace
             tspapiutils::buildJson({ {"success", true}, {"path", tspSolver.getCurrSolutionPath()}, {"nCities", adjMat.size()},
                 {"dist", tspSolver.getCurrSolutionDist()}, {"nnDist", nearestNeighborDist}, {"optimalDist", -1} }));
     }
-}
 
+    void solveTSPCustomFile(const httplib::Request& req, httplib::Response& res, const nlohmann::json& reqBody, TSPAlgo& tspSolver)
+    {
+        const std::string content = reqBody["customTSPFile"].get<std::string>();
+
+        if (content.empty())
+            throw TspApiError(400, "Missing TSP file content");
+
+        const size_t maxTspFileBytes = 5 * 1024 * 1024; // 5MB
+        if (content.size() > maxTspFileBytes)
+            throw TspApiError(400, "TSP file content is too large. Max: 5MB");
+
+        auto instance = [&]() {
+            try
+            {
+                return TSPLibParser::parseString(content);
+            }
+            catch (const std::exception& e)
+            {
+                throw TspApiError(400, e.what());
+            }
+        }();
+
+        if (instance.adjMat.empty() || instance.adjMat.size() != instance.adjMat[0].size())
+            throw TspApiError(400, "Invalid TSPLIB instance matrix!");
+
+        int nearestNeighborDist = TSPUtils::nearestNeighborDistance(instance.adjMat, 0);
+
+        tspSolver.solve(instance.adjMat);
+
+        tspapiutils::sendResponse(res, 200,
+            tspapiutils::buildJson({{"success", true}, {"path", tspSolver.getCurrSolutionPath()}, {"nCities", instance.adjMat.size()},
+                {"dist", tspSolver.getCurrSolutionDist()}, {"nnDist", nearestNeighborDist}, {"optimalDist", instance.optimalDist} }));
+    }
+}
 
 void tspapiroutes::solveTSP(const httplib::Request& req, httplib::Response& res)
 {
@@ -166,6 +199,12 @@ void tspapiroutes::solveTSP(const httplib::Request& req, httplib::Response& res)
         {
             //Solve custom tsp
             solveTSPCustom(req, res, bodyJson, *tspSolver);
+            return;
+        }
+        else if (bodyJson.contains("customTSPFile") && bodyJson["customTSPFile"].is_string())
+        {
+            //Solve custom tsp from file
+            solveTSPCustomFile(req, res, bodyJson, *tspSolver);
             return;
         }
         else //No instance or custom sent in req
